@@ -28,7 +28,7 @@ public class Robot {
 
 	private Properties props;
 	private StanfordCoreNLP pipeline;
-
+	private Action prevAct = Action.DO_NOTHING;
 	private Scanner sc;
 
 	/**
@@ -84,116 +84,207 @@ public class Robot {
 		annotation = new Annotation(name);
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+		if (name.contains("not")) {
+			System.out.println("Sure, do nothing.");
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
 		if (sentences != null && !sentences.isEmpty()) {
 			CoreMap sentence = sentences.get(0);
-			SemanticGraph graph = sentence.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
-			// graph.prettyPrint();
+			SemanticGraph graph = sentence
+					.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
+			graph.prettyPrint();
 			IndexedWord root = graph.getFirstRoot();
+			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
 			String type = root.tag();
+			String rootString = root.toString();
+			System.out.println("Root: " + rootString);
+			// System.out.println("Pairs: " + pairs.toString());
+			/*
+			 * if (pairs.size() == 0) { String todo = root.originalText().toLowerCase();
+			 * switch (todo) { case "right": { this.prevAct = Action.MOVE_RIGHT; return
+			 * Action.MOVE_RIGHT; } case "left": { this.prevAct = Action.MOVE_LEFT; return
+			 * Action.MOVE_LEFT; } case "up": { this.prevAct = Action.MOVE_UP; return
+			 * Action.MOVE_UP; } case "down": { this.prevAct = Action.MOVE_DOWN; return
+			 * Action.MOVE_DOWN; } case "clean": { this.prevAct = Action.CLEAN; return
+			 * Action.CLEAN; } case "again": { return this.prevAct; } case "moves": { return
+			 * Action.DO_NOTHING; } default: { this.prevAct = Action.DO_NOTHING; return
+			 * Action.DO_NOTHING; } } }
+			 */
 			switch (type) {
 			case "VB":
 				return processVB(graph, root);
-			case "JJ":
-				return processJJ(root);
+			case "VBP":
+				return processVB(graph, root);
+			case "JJR": // root is more, more up
+				return processVB(graph, root);
 			default:
-				return processOthers(root);
+				return processSingleWord(root);
 			}
-			/*
-			 * List<IndexedWord> li = graph.getAllNodesByPartOfSpeechPattern("RB|UH|JJ|VB");
-			 * for (IndexedWord w : li) {
-			 * 
-			 * if (w.tag().equals("RB")) { return processRB(w.word()); } if
-			 * (w.tag().equals("UH")) { return processUH(w.word()); } if
-			 * (w.tag().equals("JJ")) { return processJJ(w.word()); } if
-			 * (w.tag().equals("VB")) { return processVB(w.word()); } }
-			 */
 
-			// System.out.println("Cannot identify sentence structure.");
-			// return Action.DO_NOTHING;
 		}
 		System.out.println("Empty sentence.");
 		return Action.DO_NOTHING;
 	}
 
-	public static Action processJJ(IndexedWord root) {
-		if (root.originalText().toLowerCase().equalsIgnoreCase("clean")) {
-			System.out.println("Yes, clean.(JJ)");
-			return Action.CLEAN;
-		}
-
-		return Action.DO_NOTHING;
-	}
-
-	public static Action processOthers(IndexedWord root) {
-		System.out.println("Command: " + root.toString());
-
-		if (root.originalText().toLowerCase().equalsIgnoreCase("clean")) {
+	private Action processSingleWord(IndexedWord root) {
+		String todo = root.originalText().toLowerCase();
+		if (todo.equalsIgnoreCase("again") || todo.equalsIgnoreCase("repeat")) {
+			System.out.println("Yes, " + this.prevAct);
+			return this.prevAct;
+		} else if (todo.equalsIgnoreCase("clean")) {
 			System.out.println("Yes, clean.");
+			this.prevAct = Action.CLEAN;
 			return Action.CLEAN;
-		} else if (root.originalText().toLowerCase().equalsIgnoreCase("left")) {
-			System.out.println("Yes, left");
-			return Action.MOVE_LEFT;
-		} else if (root.originalText().toLowerCase().equalsIgnoreCase("right")) {
-			System.out.println("Yes, right");
-			return Action.MOVE_RIGHT;
-		} else if (root.originalText().toLowerCase().equalsIgnoreCase("up")) {
-			System.out.println("Yes, up");
-			return Action.MOVE_UP;
-		} else if (root.originalText().toLowerCase().equalsIgnoreCase("down")) {
-			System.out.println("Yes, down");
-			return Action.MOVE_DOWN;
-		}
+		} else if (todo.equalsIgnoreCase("undo")) {
+			System.out.println("Yes, undo.");
+			return negateMoves();
+		} else
+			return basicMoves(todo);
 
-		System.out.println("Type is invalid: " + root.tag().toString() + ", doing nothing");
-		return Action.DO_NOTHING;
 	}
 
-	public static Action processVB(SemanticGraph graph, IndexedWord root) {
+	public Action processVB(SemanticGraph graph, IndexedWord root) {
 		// if verb close to right, then go right
 		// if verb close to left, then go left
 		// if verb close to up, then go up
 		// if verb close to down, then go down
-		// if verb close to clean, then go clean (In "please clean" command, clean is a verb)
+		// if verb close to clean, then go clean (In "please clean" command, clean is a
+		// verb)
 
-		System.out.println("Command: " + root.toString());
-
+		// System.out.println("Command: " + root.toString());
+		String todo = root.originalText().toLowerCase();
 		// filtering pick up
-		if (root.originalText().toLowerCase().equalsIgnoreCase("pick")) {
+		if (todo.equalsIgnoreCase("pick")) {
 			System.out.println("No, pick isn't valid.");
+			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
 		// please clean
-		if (root.originalText().toLowerCase().equalsIgnoreCase("clean")) {
+		else if (todo.equalsIgnoreCase("clean")) {
 			System.out.println("Yes, clean.(VB)");
+			this.prevAct = Action.CLEAN;
 			return Action.CLEAN;
+		}
+		// undo
+		else if (todo.equalsIgnoreCase("undo")) {
+			System.out.println("Yes, undo.(VB)");
+			return negateMoves();
 		}
 
 		List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
 		System.out.println(pairs.toString());
 
 		for (Pair<GrammaticalRelation, IndexedWord> pair : pairs) {
-			IndexedWord word = pair.second;
 
-			if (word.originalText().toLowerCase().equalsIgnoreCase("left")) {
+			String word = pair.second.originalText().toLowerCase();
+			// List<Pair<GrammaticalRelation, IndexedWord>> pair = graph.childPairs(word);
+			System.out.println(pair.toString());
+
+			if (word.equalsIgnoreCase("left")) {
 				System.out.println("Yes, left");
+				this.prevAct = Action.MOVE_LEFT;
 				return Action.MOVE_LEFT;
-			} else if (word.originalText().toLowerCase().equalsIgnoreCase("right")) {
+			} else if (word.equalsIgnoreCase("right")) {
 				System.out.println("Yes, right");
+				this.prevAct = Action.MOVE_RIGHT;
 				return Action.MOVE_RIGHT;
-			} else if (word.originalText().toLowerCase().equalsIgnoreCase("up")) {
+			} else if (word.equalsIgnoreCase("up")) {
 				System.out.println("Yes, up");
+				this.prevAct = Action.MOVE_UP;
 				return Action.MOVE_UP;
-			} else if (word.originalText().toLowerCase().equalsIgnoreCase("down")) {
+			} else if (word.equalsIgnoreCase("down")) {
 				System.out.println("Yes, down");
+				this.prevAct = Action.MOVE_DOWN;
 				return Action.MOVE_DOWN;
+			} else if (word.equalsIgnoreCase("again")) {
+				System.out.println("Yes, " + this.prevAct);
+				return this.prevAct;
+			} else if (word.equalsIgnoreCase("back")) {
+				System.out.println("Yes, go back");
+				return negateMoves();
+			}
+
+			List<Pair<GrammaticalRelation, IndexedWord>> innerpair = graph.childPairs(pair.second);
+			System.out.println("innerpair" + innerpair);
+			if (innerpair.size() != 0) {
+				for (Pair<GrammaticalRelation, IndexedWord> p : innerpair) {
+					String inword = p.second.originalText().toLowerCase();
+					if (inword.equalsIgnoreCase("left")) {
+						System.out.println("Yes, long sentence, left");
+						this.prevAct = Action.MOVE_LEFT;
+						return Action.MOVE_LEFT;
+					} else if (inword.equalsIgnoreCase("right")) {
+						System.out.println("Yes, long sentence, right");
+						this.prevAct = Action.MOVE_RIGHT;
+						return Action.MOVE_RIGHT;
+					} else if (inword.equalsIgnoreCase("up")) {
+						System.out.println("Yes, long sentence, up");
+						this.prevAct = Action.MOVE_UP;
+						return Action.MOVE_UP;
+					} else if (inword.equalsIgnoreCase("down")) {
+						System.out.println("Yes, long sentence, down");
+						this.prevAct = Action.MOVE_DOWN;
+						return Action.MOVE_DOWN;
+					}
+				}
 			}
 
 		}
 
 		System.out.println("No, invalid VB, doing nothing");
+		this.prevAct = Action.DO_NOTHING;
 		return Action.DO_NOTHING;
 	}
-	
 
+	public Action basicMoves(String todo) {
+		System.out.println("basic moving" + todo);
+		if (todo.equalsIgnoreCase("left")) {
+			System.out.println("Yes, left");
+			this.prevAct = Action.MOVE_LEFT;
+			return Action.MOVE_LEFT;
+		} else if (todo.equalsIgnoreCase("right")) {
+			System.out.println("Yes, right");
+			this.prevAct = Action.MOVE_RIGHT;
+			return Action.MOVE_RIGHT;
+		} else if (todo.equalsIgnoreCase("up")) {
+			System.out.println("Yes, up");
+			this.prevAct = Action.MOVE_UP;
+			return Action.MOVE_UP;
+		} else if (todo.equalsIgnoreCase("down")) {
+			System.out.println("Yes, down");
+			this.prevAct = Action.MOVE_DOWN;
+			return Action.MOVE_DOWN;
+		} else {
+			System.out.println("Type is invalid, doing nothing");
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
+	}
+
+	public Action negateMoves() {
+		System.out.println("negating move");
+		if (this.prevAct.equals(Action.MOVE_RIGHT)) {
+			System.out.println("Yes, left");
+			this.prevAct = Action.MOVE_LEFT;
+			return Action.MOVE_LEFT;
+		} else if (this.prevAct.equals(Action.MOVE_LEFT)) {
+			System.out.println("Yes, right");
+			this.prevAct = Action.MOVE_RIGHT;
+			return Action.MOVE_RIGHT;
+		} else if (this.prevAct.equals(Action.MOVE_DOWN)) {
+			System.out.println("Yes, up");
+			this.prevAct = Action.MOVE_UP;
+			return Action.MOVE_UP;
+		} else if (this.prevAct.equals(Action.MOVE_UP)) {
+			System.out.println("Yes, down");
+			this.prevAct = Action.MOVE_DOWN;
+			return Action.MOVE_DOWN;
+		} else {
+			System.out.println("No action before, doing nothing");
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
+	}
 
 }
