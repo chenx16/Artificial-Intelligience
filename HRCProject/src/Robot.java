@@ -119,7 +119,7 @@ public class Robot {
 			case "JJR": // root is more, more up
 				return processVB(graph, root);
 			default:
-				return processSingleWord(root);
+				return processSingleWord(name,root);
 			}
 
 		}
@@ -127,12 +127,15 @@ public class Robot {
 		return Action.DO_NOTHING;
 	}
 
-	private Action processSingleWord(IndexedWord root) {
+
+	private Action processSingleWord(String name, IndexedWord root) {
+		System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
+		
 		if (todo.equalsIgnoreCase("again") || todo.equalsIgnoreCase("repeat")) {
 			System.out.println("Yes, " + this.prevAct);
 			return this.prevAct;
-		} else if (todo.equalsIgnoreCase("clean")) {
+		} else if (name.contains("clean")) {
 			System.out.println("Yes, clean.");
 			this.prevAct = Action.CLEAN;
 			return Action.CLEAN;
@@ -197,6 +200,9 @@ public class Robot {
 				System.out.println("Yes, down");
 				this.prevAct = Action.MOVE_DOWN;
 				return Action.MOVE_DOWN;
+			} else if (todo.equalsIgnoreCase("clean")) {
+				this.prevAct = Action.CLEAN;
+				return Action.CLEAN;
 			} else if (word.equalsIgnoreCase("again")) {
 				System.out.println("Yes, " + this.prevAct);
 				return this.prevAct;
@@ -226,6 +232,10 @@ public class Robot {
 						System.out.println("Yes, long sentence, down");
 						this.prevAct = Action.MOVE_DOWN;
 						return Action.MOVE_DOWN;
+					} else if (todo.equalsIgnoreCase("clean")) {
+						System.out.println("Yes, long sentence, clean.");
+						this.prevAct = Action.CLEAN;
+						return Action.CLEAN;
 					}
 				}
 			}
