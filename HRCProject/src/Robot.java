@@ -31,19 +31,13 @@ public class Robot {
 	private StanfordCoreNLP pipeline;
 	private Action prevAct = Action.DO_NOTHING;
 	private Scanner sc;
-	private String[] actPrepends = { "I think you want me to ", "I am going to ", "Ok, I will ", "Sure, I am going to ",
-			"Got it! I will immediately " };
-	private String[] clarifications = { "I知 sorry but I知 not sure I understand. Could you say it in another way?",
-										"I didn't quite get that. Can you clarify that for me?",
-										"Sorry, could you rephrase that?", 
-										"I didn't catch that, could you please try one more time?",
-										"Sorry, ould you elaborate on that?",
-										"I didn't understand that. Please try something else.",
-										"Sorry, what do you want me to do?",
-										"Sorry, could you be more specific?",
-										"Sorry, I'm confused about what you said, could you please try again?",
-										"I'm not sure what you want me to do, could you make it more clear?"};
-								
+	private String myname;
+	private String[] actPrepends;
+	private String[] clarifications;
+	private String[] praise = { "No problem!", "Thank you! I've tried my best!", "Glad to privide service for you!",
+			"Happy to work with you!", "Nice to meet you,too!" };
+	private String[] reponse = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "Yea~" };
+	private boolean ifNaming = false;
 
 	/**
 	 * Initializes a Robot on a specific tile in the environment.
@@ -53,7 +47,9 @@ public class Robot {
 		this.env = env;
 		this.posRow = posRow;
 		this.posCol = posCol;
-
+		this.myname = null;
+		this.actPrepends = new String[5];
+		this.clarifications = new String[10];
 		props = new Properties();
 		props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse");
 		pipeline = new StanfordCoreNLP(props);
@@ -84,6 +80,30 @@ public class Robot {
 		posCol--;
 	}
 
+	public void updateactPrepend() {
+		this.actPrepends[0] = "I think you want me to ";
+		this.actPrepends[1] = this.myname + " is going to ";
+		this.actPrepends[2] = "Ok, " + this.myname + " will ";
+		this.actPrepends[3] = "Sure, " + this.myname + " is going to ";
+		this.actPrepends[4] = "Got it! " + this.myname + " will immediately ";
+
+	}
+
+	public void updateactClarification() {
+		this.clarifications[0] = "I知 sorry but I知 not sure I understand. Could you say it in another way for "
+				+ this.myname + "?";
+		this.clarifications[1] = "I didn't quite get that. Can you clarify that for " + this.myname + "?";
+		this.clarifications[2] = "Sorry, could you rephrase that for " + this.myname + "?";
+		this.clarifications[3] = "I didn't catch that, could you please try one more time?";
+		this.clarifications[4] = "Sorry, could you elaborate on that?";
+		this.clarifications[5] = "I didn't understand that. Please try something else.";
+		this.clarifications[6] = "Sorry, what do you want " + this.myname + " to do?";
+		this.clarifications[7] = "Sorry, could you be more specific?";
+		this.clarifications[8] = "Sorry, " + this.myname
+				+ " is confused about what you said, could you please try again?";
+		this.clarifications[9] = "I'm not sure what you want me to do, could you make it more clear?";
+	}
+
 	/**
 	 * Returns the next action to be taken by the robot. A support function that
 	 * processes the path LinkedList that has been populates by the search
@@ -100,6 +120,21 @@ public class Robot {
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
 		if (name.contains("not")) {
 			System.out.println("Sure, do nothing.");
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
+		if (this.myname == null && !this.ifNaming) {
+			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
+			this.ifNaming = true;
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
+		if (this.ifNaming) {
+			this.myname = name;
+			this.ifNaming = false;
+			System.out.println("Got the name!");
+			updateactPrepend();
+			updateactClarification();
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
@@ -133,7 +168,7 @@ public class Robot {
 			case "JJR": // root is more, more up
 				return processVB(graph, root);
 			default:
-				return processSingleWord(name, root);
+				return processSingleWord(name, root, graph);
 			}
 
 		}
@@ -142,7 +177,7 @@ public class Robot {
 		return Action.DO_NOTHING;
 	}
 
-	private Action processSingleWord(String name, IndexedWord root) {
+	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
 		System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
 
@@ -158,6 +193,12 @@ public class Robot {
 		} else if (todo.equalsIgnoreCase("undo")) {
 			System.out.println("Yes, undo.");
 			return negateMoves();
+		} else if (ifAskName(graph, root)) {
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		} else if (ifPraise(graph, root)) {
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
 		} else
 			return basicMoves(todo);
 
@@ -191,6 +232,12 @@ public class Robot {
 		else if (todo.equalsIgnoreCase("undo")) {
 			System.out.println("Yes, undo.(VB)");
 			return negateMoves();
+		} else if (ifAskName(graph, root)) {
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		} else if (ifPraise(graph, root)) {
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
 		}
 
 		List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
@@ -272,7 +319,7 @@ public class Robot {
 
 		}
 		System.out.println(getRandom(this.clarifications));
-		//System.out.println("No, invalid VB, doing nothing");
+		// System.out.println("No, invalid VB, doing nothing");
 		this.prevAct = Action.DO_NOTHING;
 		return Action.DO_NOTHING;
 	}
@@ -301,7 +348,7 @@ public class Robot {
 			return Action.MOVE_DOWN;
 		} else {
 			System.out.println(getRandom(this.clarifications));
-			//System.out.println("Type is invalid, doing nothing");
+			// System.out.println("Type is invalid, doing nothing");
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
@@ -330,10 +377,55 @@ public class Robot {
 			this.prevAct = Action.MOVE_DOWN;
 			return Action.MOVE_DOWN;
 		} else {
-			System.out.println("No action before, doing nothing");
+			System.out.println("No action before," + this.myname + " doing nothing");
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
+	}
+
+	private boolean ifAskName(SemanticGraph graph, IndexedWord root) {
+		String word = root.originalText().toLowerCase();
+		// Who are you?
+		// What is your name?
+		if (root.tag().equals("WP")) {
+			List<Pair<GrammaticalRelation, IndexedWord>> pair = graph.childPairs(root);
+			for (Pair<GrammaticalRelation, IndexedWord> p : pair) {
+				IndexedWord w = p.second;
+				word = w.originalText().toLowerCase();
+
+				if (word.equalsIgnoreCase("name") || word.equalsIgnoreCase("you")) {
+					if (this.myname == null) {
+						System.out.println("Hello! I don't have a name, please give me one!");
+						this.ifNaming = true;
+					} else {
+						System.out.println("Hello! My name is " + this.myname + ", and I am a intelligent cleaner!!");
+					}
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private boolean ifPraise(SemanticGraph dependencies, IndexedWord root) {
+		String word = root.originalText().toLowerCase();
+		if (word.equalsIgnoreCase("good") || word.equalsIgnoreCase("nice") || word.equalsIgnoreCase("well")
+				|| word.equalsIgnoreCase("like") || word.equalsIgnoreCase("love")) {
+			System.out.println(getRandom(this.praise));
+			return true;
+		}
+		// good job, well done, nice work
+		List<Pair<GrammaticalRelation, IndexedWord>> pair = dependencies.childPairs(root);
+		for (Pair<GrammaticalRelation, IndexedWord> p : pair) {
+			IndexedWord w = p.second;
+			word = w.originalText().toLowerCase();
+			if (word.equalsIgnoreCase("good") || word.equalsIgnoreCase("nice") || word.equalsIgnoreCase("well")
+					|| word.equalsIgnoreCase("like") || word.equalsIgnoreCase("love")) {
+				System.out.println(getRandom(this.praise));
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static String getRandom(String[] array) {
