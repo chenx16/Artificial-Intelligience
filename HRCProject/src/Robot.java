@@ -35,7 +35,7 @@ public class Robot {
 	private String[] actPrepends;
 	private String[] clarifications;
 	private String[] praise = { "No problem!", "Thank you! I've tried my best!", "Glad to privide service for you!",
-			"Happy to work with you!", "Nice to meet you,too!" };
+			"Happy to work with you!", "Thanks, nice to meet you!" };
 	private String[] reponses = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "OK!" };
 	private boolean ifNaming = false;
 
@@ -90,8 +90,7 @@ public class Robot {
 	}
 
 	public void updateactClarification() {
-		this.clarifications[0] = "I知 sorry but I知 not sure I understand. Could you say it in another way for "
-				+ this.myname + "?";
+		this.clarifications[0] = "I知 sorry but I知 not sure I understand. Could you say it in another way for " + this.myname + "?";
 		this.clarifications[1] = "I didn't quite get that. Can you clarify that for " + this.myname + "?";
 		this.clarifications[2] = "Sorry, could you rephrase that for " + this.myname + "?";
 		this.clarifications[3] = "I didn't catch that, could you please try one more time?";
@@ -99,8 +98,7 @@ public class Robot {
 		this.clarifications[5] = "I didn't understand that. Please try something else.";
 		this.clarifications[6] = "Sorry, what do you want " + this.myname + " to do?";
 		this.clarifications[7] = "Sorry, could you be more specific?";
-		this.clarifications[8] = "Sorry, " + this.myname
-				+ " is confused about what you said, could you please try again?";
+		this.clarifications[8] = "Sorry, " + this.myname + " is confused about what you said, could you please try again?";
 		this.clarifications[9] = "I'm not sure what you want me to do, could you make it more clear?";
 	}
 
@@ -111,10 +109,14 @@ public class Robot {
 	 */
 	public Action getAction() {
 		Annotation annotation;
+		if (this.myname == null && !this.ifNaming) {
+			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
+		}
 		System.out.print("> ");
 		sc = new Scanner(System.in);
 		String name = sc.nextLine();
 //	    System.out.println(name);
+
 		annotation = new Annotation(name);
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
@@ -125,14 +127,8 @@ public class Robot {
 			return Action.DO_NOTHING;
 		}
 		if (this.myname == null && !this.ifNaming) {
-			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
 			this.ifNaming = true;
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
-		if (this.ifNaming) {
 			this.myname = name;
-			this.ifNaming = false;
 			System.out.println(getRandom(this.reponses));
 			System.out.println("Got the name!");
 			updateactPrepend();
@@ -149,7 +145,7 @@ public class Robot {
 			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
 			String type = root.tag();
 			String rootString = root.toString();
-			//System.out.println("Root: " + rootString);
+			// System.out.println("Root: " + rootString);
 			// System.out.println("Pairs: " + pairs.toString());
 			switch (type) {
 			case "VB":
@@ -169,7 +165,7 @@ public class Robot {
 	}
 
 	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
-		//System.out.println("Processing Single Word");
+		// System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
 
 		if (todo.equalsIgnoreCase("again") || todo.equalsIgnoreCase("repeat")) {
@@ -241,7 +237,7 @@ public class Robot {
 		}
 
 		List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
-		System.out.println(pairs.toString());
+		//System.out.println(pairs.toString());
 
 		for (Pair<GrammaticalRelation, IndexedWord> pair : pairs) {
 
@@ -393,9 +389,7 @@ public class Robot {
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move down");
 			this.prevAct = Action.MOVE_DOWN;
-			
-			
-			
+
 			return Action.MOVE_DOWN;
 		} else {
 			System.out.println("No action before, " + this.myname + " doing nothing");
@@ -415,12 +409,7 @@ public class Robot {
 				word = w.originalText().toLowerCase();
 
 				if (word.equalsIgnoreCase("name") || word.equalsIgnoreCase("you")) {
-					if (this.myname == null) {
-						System.out.println("Hello! I don't have a name, please give me one!");
-						this.ifNaming = true;
-					} else {
-						System.out.println("Hello! My name is " + this.myname + ", and I am a intelligent cleaner!!");
-					}
+					System.out.println("Hello! My name is " + this.myname + ", and I am a intelligent cleaner!!");
 					return true;
 				}
 			}
