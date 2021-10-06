@@ -36,7 +36,7 @@ public class Robot {
 	private String[] clarifications;
 	private String[] praise = { "No problem!", "Thank you! I've tried my best!", "Glad to privide service for you!",
 			"Happy to work with you!", "Nice to meet you,too!" };
-	private String[] reponse = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "Yea~" };
+	private String[] reponses = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "OK!" };
 	private boolean ifNaming = false;
 
 	/**
@@ -119,6 +119,7 @@ public class Robot {
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
 		if (name.contains("not")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.println("Sure, do nothing.");
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
@@ -132,6 +133,7 @@ public class Robot {
 		if (this.ifNaming) {
 			this.myname = name;
 			this.ifNaming = false;
+			System.out.println(getRandom(this.reponses));
 			System.out.println("Got the name!");
 			updateactPrepend();
 			updateactClarification();
@@ -142,24 +144,13 @@ public class Robot {
 			CoreMap sentence = sentences.get(0);
 			SemanticGraph graph = sentence
 					.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
-			graph.prettyPrint();
+			// graph.prettyPrint();
 			IndexedWord root = graph.getFirstRoot();
 			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
 			String type = root.tag();
 			String rootString = root.toString();
-			System.out.println("Root: " + rootString);
+			//System.out.println("Root: " + rootString);
 			// System.out.println("Pairs: " + pairs.toString());
-			/*
-			 * if (pairs.size() == 0) { String todo = root.originalText().toLowerCase();
-			 * switch (todo) { case "right": { this.prevAct = Action.MOVE_RIGHT; return
-			 * Action.MOVE_RIGHT; } case "left": { this.prevAct = Action.MOVE_LEFT; return
-			 * Action.MOVE_LEFT; } case "up": { this.prevAct = Action.MOVE_UP; return
-			 * Action.MOVE_UP; } case "down": { this.prevAct = Action.MOVE_DOWN; return
-			 * Action.MOVE_DOWN; } case "clean": { this.prevAct = Action.CLEAN; return
-			 * Action.CLEAN; } case "again": { return this.prevAct; } case "moves": { return
-			 * Action.DO_NOTHING; } default: { this.prevAct = Action.DO_NOTHING; return
-			 * Action.DO_NOTHING; } } }
-			 */
 			switch (type) {
 			case "VB":
 				return processVB(graph, root);
@@ -178,25 +169,31 @@ public class Robot {
 	}
 
 	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
-		System.out.println("Processing Single Word");
+		//System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
 
 		if (todo.equalsIgnoreCase("again") || todo.equalsIgnoreCase("repeat")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println(this.prevAct);
 			return this.prevAct;
 		} else if (name.contains("clean")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("clean.");
 			this.prevAct = Action.CLEAN;
 			return Action.CLEAN;
 		} else if (todo.equalsIgnoreCase("undo")) {
+			System.out.println(getRandom(this.reponses));
+			System.out.print(getRandom(this.actPrepends));
 			System.out.println("Yes, undo.");
 			return negateMoves();
 		} else if (ifAskName(graph, root)) {
+			System.out.println(getRandom(this.reponses));
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		} else if (ifPraise(graph, root)) {
+			System.out.println(getRandom(this.reponses));
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		} else
@@ -223,6 +220,7 @@ public class Robot {
 		}
 		// please clean
 		else if (todo.equalsIgnoreCase("clean")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("clean.");
 			this.prevAct = Action.CLEAN;
@@ -233,9 +231,11 @@ public class Robot {
 			System.out.println("Yes, undo.(VB)");
 			return negateMoves();
 		} else if (ifAskName(graph, root)) {
+			System.out.println(getRandom(this.reponses));
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		} else if (ifPraise(graph, root)) {
+			System.out.println(getRandom(this.reponses));
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
@@ -250,35 +250,43 @@ public class Robot {
 			// System.out.println(pair.toString());
 
 			if (word.equalsIgnoreCase("left")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println("move left");
 				this.prevAct = Action.MOVE_LEFT;
 				return Action.MOVE_LEFT;
 			} else if (word.equalsIgnoreCase("right")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println("move right");
 				this.prevAct = Action.MOVE_RIGHT;
 				return Action.MOVE_RIGHT;
 			} else if (word.equalsIgnoreCase("up")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println("move up");
 				this.prevAct = Action.MOVE_UP;
 				return Action.MOVE_UP;
 			} else if (word.equalsIgnoreCase("down")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println("move down");
 				this.prevAct = Action.MOVE_DOWN;
 				return Action.MOVE_DOWN;
 			} else if (todo.equalsIgnoreCase("clean")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println("clean");
 				this.prevAct = Action.CLEAN;
 				return Action.CLEAN;
 			} else if (word.equalsIgnoreCase("again")) {
+				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
 				System.out.println(this.prevAct);
 				return this.prevAct;
 			} else if (word.equalsIgnoreCase("back")) {
+				System.out.println(getRandom(this.reponses));
+				System.out.print(getRandom(this.actPrepends));
 				System.out.println("Yes, going back");
 				return negateMoves();
 			}
@@ -289,26 +297,31 @@ public class Robot {
 				for (Pair<GrammaticalRelation, IndexedWord> p : innerpair) {
 					String inword = p.second.originalText().toLowerCase();
 					if (inword.equalsIgnoreCase("left")) {
+						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
 						System.out.println("go left");
 						this.prevAct = Action.MOVE_LEFT;
 						return Action.MOVE_LEFT;
 					} else if (inword.equalsIgnoreCase("right")) {
+						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
 						System.out.println("go right");
 						this.prevAct = Action.MOVE_RIGHT;
 						return Action.MOVE_RIGHT;
 					} else if (inword.equalsIgnoreCase("up")) {
+						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
 						System.out.println("go up");
 						this.prevAct = Action.MOVE_UP;
 						return Action.MOVE_UP;
 					} else if (inword.equalsIgnoreCase("down")) {
+						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
 						System.out.println("go down");
 						this.prevAct = Action.MOVE_DOWN;
 						return Action.MOVE_DOWN;
 					} else if (todo.equalsIgnoreCase("clean")) {
+						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
 						System.out.println("clean.");
 						this.prevAct = Action.CLEAN;
@@ -327,21 +340,25 @@ public class Robot {
 	public Action basicMoves(String todo) {
 		// System.out.println("basic moving" + todo);
 		if (todo.equalsIgnoreCase("left")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move left");
 			this.prevAct = Action.MOVE_LEFT;
 			return Action.MOVE_LEFT;
 		} else if (todo.equalsIgnoreCase("right")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move right");
 			this.prevAct = Action.MOVE_RIGHT;
 			return Action.MOVE_RIGHT;
 		} else if (todo.equalsIgnoreCase("up")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move up");
 			this.prevAct = Action.MOVE_UP;
 			return Action.MOVE_UP;
 		} else if (todo.equalsIgnoreCase("down")) {
+			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move down");
 			this.prevAct = Action.MOVE_DOWN;
@@ -356,6 +373,7 @@ public class Robot {
 
 	public Action negateMoves() {
 		// System.out.println("negating move");
+		System.out.println(getRandom(this.reponses));
 		if (this.prevAct.equals(Action.MOVE_RIGHT)) {
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move left");
@@ -375,9 +393,12 @@ public class Robot {
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("move down");
 			this.prevAct = Action.MOVE_DOWN;
+			
+			
+			
 			return Action.MOVE_DOWN;
 		} else {
-			System.out.println("No action before," + this.myname + " doing nothing");
+			System.out.println("No action before, " + this.myname + " doing nothing");
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
