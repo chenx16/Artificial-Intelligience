@@ -16,6 +16,8 @@ public class Robot {
 	private int posRow;
 	private int posCol;
 	private LinkedList<Action> path;
+	private LinkedList<AState> p;
+	private LinkedList<AState> P;
 	private boolean pathFound;
 	private long openCount;
 	private int pathLength;
@@ -116,7 +118,6 @@ public class Robot {
 				/*
 				 * for (int i = 0; i < pathLength; i++) { System.out.println(path.get(i)); }
 				 */
-				// resetOpenCount();
 				return;
 
 			}
@@ -173,59 +174,109 @@ public class Robot {
 	 */
 	public void bfsM() {
 		// TODO: Implement this method
-		LinkedList<Action> actions = new LinkedList<>();
+		// LinkedList<Action> actions = new LinkedList<>();
 		// contains, if it contains, remove
 		LinkedList<Position> targets = env.getTargets();
+		System.out.print("shooooooooooooooooooooooooooooooot");
+
 		Queue<State> open = new LinkedList<>();
 		LinkedList<State> closed = new LinkedList<>();
-		open.add(new State(posRow, posCol, new LinkedList<Action>()));
-		// this.openCount++;
+		open.add(new State(posRow, posCol, new LinkedList<Action>(), targets));
+		this.openCount++;
 		while (!open.isEmpty()) {
 			State cell = open.poll();
-			// System.out.print(cell.col + "," + cell.row + "; " + " ");
+			System.out.print(cell.col + "," + cell.row + "; " + " ");
 			// TileStatus status = this.env.getTileStatus(cell.row, cell.col);
 			closed.add(cell);
-			if (containsPosition(targets, cell.row, cell.col)) {
-				removesPosition(targets, cell.row, cell.col);
-				if (targets.size() == 0) {
-					// targets sum
-					this.pathFound = true;
-					this.path = cell.getActions();
-					this.pathLength = this.path.size();
-					break;
-				}
-
-				else {
-					// still other targets not find
-					resetOpenCount();
-					open.clear();
-					closed.clear();
-
-					// LinkedList<Action> next = (LinkedList<Action>) cell.getActions().clone();
-					// cell = new State(cell.row, cell.col, next);
-					closed.add(cell);
-				}
+			if (containsPosition(cell.targets, cell.row, cell.col)) {
+				LinkedList<Position> newtargets = removesPosition(cell.targets, cell.row, cell.col);
+				cell.setTargets(newtargets);
 			}
+
+			if (cell.targets.size() == 0) {
+				// targets found
+				this.pathFound = true;
+				this.path = cell.getActions();
+				this.pathLength = this.path.size();
+				break;
+			}
+
+			// else { // still other targets not find // resetOpenCount();
+
+			// open.clear();
+			// closed.clear();
+			// this.openCount++;
+//				LinkedList<Action> next = (LinkedList<Action>) cell.getActions().clone();
+//				LinkedList<Position> newtargets = (LinkedList<Position>) cell.targets.clone();
+//				cell = new State(cell.row, cell.col, next, newtargets);
+			// closed.add(cell);
+			// open.add(cell);
+			// }
+
+			// }
 
 			// check its neighbors and decide next step
 			// int ifnext = 0;
 			for (int i = 0; i < 4; i++) {
 				int row = cell.row + this.rowD[i];
 				int col = cell.col + this.colD[i];
+				LinkedList<Position> newtargets = (LinkedList<Position>) cell.targets.clone();
 
-				if (env.validPos(row, col) && !containsState(open, row, col) && !containsState(closed, row, col)) {
+				if (env.validPos(row, col) && !containsState(closed, row, col, newtargets, cell.getActions())
+						&& !containsState(open, row, col, newtargets, cell.getActions())) {
 					// ifnext ++;
-					LinkedList<Action> nxt = (LinkedList<Action>) cell.getActions().clone();
-					if (i == 0)
-						nxt.add(Action.MOVE_UP);
-					else if (i == 1)
-						nxt.add(Action.MOVE_RIGHT);
-					else if (i == 2)
-						nxt.add(Action.MOVE_DOWN);
-					else if (i == 3)
-						nxt.add(Action.MOVE_LEFT);
-					open.add(new State(row, col, nxt));
-					this.openCount++;
+					// LinkedList<State> nxt = new LinkedList<State>();
+					LinkedList<Action> as = (LinkedList<Action>) cell.getActions().clone();
+
+					// State compare = open.peek();
+					if (i == 0) {
+						as.add(Action.MOVE_UP);
+						State nxt = new State(row, col, as, newtargets);
+
+						open.add(nxt);
+						this.openCount++;
+
+					} else if (i == 1) {
+						as.add(Action.MOVE_RIGHT);
+						State nxt = new State(row, col, as, newtargets);
+
+						open.add(nxt);
+						this.openCount++;
+
+					} else if (i == 2) {
+						as.add(Action.MOVE_DOWN);
+						State nxt = new State(row, col, as, newtargets);
+
+						open.add(nxt);
+						this.openCount++;
+
+					} else if (i == 3) {
+						as.add(Action.MOVE_LEFT);
+						State nxt = new State(row, col, as, newtargets);
+						/*
+						 * for (State compare : open) { if (compare.row == row && compare.col == col) {
+						 * if (subsetOf(compare.targets, nxt.targets)) { // do not add p } else if
+						 * (subsetOf(nxt.targets, compare.targets)) { // do not add p
+						 * open.remove(compare); } else if (subsetOf(compare.targets, nxt.targets) &&
+						 * subsetOf(nxt.targets, compare.targets)) { if (nxt.actions.size() <
+						 * compare.targets.size()) { open.remove(compare); } } } else {
+						 */
+						open.add(nxt);
+						this.openCount++;
+//							}
+//						}
+					}
+
+					// check final location of every state in open against nxt
+					// if the final location is equal:
+					// then check the set of targets each has yet to see against each other
+					// (you need to make a set of targets that you have yet to see, for every state)
+					// add or dont add based upon the set comparison of the set of targets to each
+					// other
+					// if the set of targets are the same, then add or dont add based on path length
+					// change nxt to list of Astate
+					// open.add(new State(row, col, nxt));
+
 				}
 
 			}
@@ -234,6 +285,7 @@ public class Robot {
 				return;
 
 		}
+
 	}
 
 	/**
@@ -246,7 +298,7 @@ public class Robot {
 	public void astar() {
 		PriorityQueue<AState> open = new PriorityQueue<>();
 		LinkedList<AState> closed = new LinkedList<>();
-		open.add(new AState(posRow, posCol, 0, 0, new LinkedList<Action>()));
+		open.add(new AState(posRow, posCol, new LinkedList<Action>()));
 		this.openCount++;
 
 		while (!open.isEmpty()) {
@@ -272,7 +324,7 @@ public class Robot {
 						nxt.add(Action.MOVE_DOWN);
 					else if (i == 3)
 						nxt.add(Action.MOVE_LEFT);
-					AState nextS = new AState(row, col, 0, cell.currentF + 1, nxt);
+					AState nextS = new AState(row, col, nxt);
 					// PriorityQueue<AState> openCopy = new PriorityQueue<AState>(open);
 					if (!containsAStateQ(open, row, col) && !containsAState(closed, row, col)
 							&& env.validPos(row, col)) {
@@ -289,6 +341,12 @@ public class Robot {
 
 	}
 
+	// compare if a state is better
+	// position of robot, which targets are left
+	// put on the queue
+	// what's the cost
+	// close->remove from open
+
 	/**
 	 * This method implements A* search for maps with multiple targets. It populates
 	 * the path LinkedList and sets pathFound to true, if a path has been found.
@@ -303,8 +361,8 @@ public class Robot {
 		LinkedList<Position> ClosestTarget = new LinkedList<Position>();
 		int targetsFound = 0;
 		ClosestTarget.add(getClosestTarget(targets, posRow, posCol));
-		open.add(new AState(posRow, posCol, 0, 0, new LinkedList<Action>(), ClosestTarget));
-		// this.openCount++;
+		open.add(new AState(posRow, posCol,new LinkedList<Action>(), ClosestTarget));
+		this.openCount++;
 
 		while (!open.isEmpty()) {
 			AState cell = open.poll();
@@ -322,7 +380,7 @@ public class Robot {
 					ClosestTarget.add(getClosestTarget(targets, cell.row, cell.col));
 					open.clear();
 					closed.clear();
-					open.add(new AState(cell.row, cell.col, cell.finalF, cell.currentF + 1,
+					open.add(new AState(cell.row, cell.col, 
 							(LinkedList<Action>) cell.actions.clone(), (LinkedList<Position>) ClosestTarget.clone()));
 					this.openCount++;
 					continue;
@@ -332,13 +390,21 @@ public class Robot {
 			// recalculate the nearest target
 			ClosestTarget.clear();
 			ClosestTarget.add(getClosestTarget(targets, cell.row, cell.col));
-			cell.targets = ClosestTarget;
+			cell.targets = (LinkedList<Position>) ClosestTarget.clone();
 
 			for (int i = 0; i < 4; i++) {
 				int row = cell.row + this.rowD[i];
 				int col = cell.col + this.colD[i];
 				if (env.validPos(row, col)) {
 					LinkedList<Action> nxt = (LinkedList<Action>) cell.actions.clone();
+
+					/*
+					 * Robot.AState P = this.P.getLast(); Robot.AState p = this.p.getLast(); if
+					 * (P.row == p.row && P.col == p.col) { if(p.actions.containsAll(P.actions)) {
+					 * 
+					 * } if(P.actions.containsAll(p.actions)) { P. } }
+					 */
+
 					if (i == 0)
 						nxt.add(Action.MOVE_UP);
 					else if (i == 1)
@@ -349,9 +415,10 @@ public class Robot {
 						nxt.add(Action.MOVE_LEFT);
 					LinkedList<Position> newTargetList = (LinkedList<Position>) cell.targets.clone();
 					removesPosition(newTargetList, row, col);
-					AState nextS = new AState(row, col, 0, cell.currentF + 1, nxt, newTargetList);
+					// this.openCount++;
+					AState nextS = new AState(row, col, nxt, newTargetList);
 					if (!containsAStateQ(open, row, col) && !containsAState(closed, row, col)) {
-						nextS.finalF = cell.currentF + calculateH(nextS, null);
+						nextS.finalF = nxt.size() + calculateH(nextS, null);
 						open.add(nextS);
 						this.openCount++;
 					}
@@ -366,11 +433,19 @@ public class Robot {
 		private int row;
 		private int col;
 		private LinkedList<Action> actions;
+		LinkedList<Position> targets;
 
 		public State(int row, int col, LinkedList<Action> actions) {
 			this.row = row;
 			this.col = col;
 			this.actions = actions;
+		}
+
+		public State(int row, int col, LinkedList<Action> actions, LinkedList<Position> targets) {
+			this.row = row;
+			this.col = col;
+			this.actions = actions;
+			this.targets = targets;
 		}
 
 		public LinkedList<Action> getActions() {
@@ -380,6 +455,26 @@ public class Robot {
 		public void setActions(LinkedList<Action> actions) {
 			this.actions = actions;
 		}
+
+		public void setTargets(LinkedList<Position> targets) {
+			this.targets = targets;
+		}
+	}
+
+	public boolean subsetOf(LinkedList<Position> targets1, LinkedList<Position> targets2) {
+		// return true if targets1 is a subset of targets2
+		int x = 0;
+		int l = targets1.size();
+		for (Position p : targets1) {
+			for (Position p2 : targets2) {
+				if (x == l)
+					return true;
+				if (p.getRow() == p2.getRow() && p.getCol() == p2.getCol()) {
+					x++;
+				}
+			}
+		}
+		return false;
 	}
 
 	public boolean containsPosition(LinkedList<Position> positions, int row, int col) {
@@ -395,6 +490,64 @@ public class Robot {
 		for (State s : states) {
 			if (s.row == row && s.col == col) {
 				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean containsState(LinkedList<State> states, int row, int col, LinkedList<Position> targets,
+			LinkedList<Action> actions) {
+
+		for (State s : states) {
+			if (s.row == row && s.col == col) {
+				if (s.targets.size() == targets.size()) {
+					boolean match = true;
+					for (Position t1 : targets) {
+						boolean foundOne = false;
+						for (Position t2 : s.targets) {
+							if (t1.getRow() == t2.getRow() && t1.getCol() == t2.getCol()) {
+								foundOne = true;
+							}
+						}
+						if (!foundOne)
+							match = false;
+					}
+					if (match) {
+						// if the size of the path of the one we are adding is greater, then dont add it
+						if (actions.size() > s.actions.size())
+							return true;
+					}
+
+				}
+			}
+		}
+		return false;
+	}
+
+	public boolean containsState(Queue<State> states, int row, int col, LinkedList<Position> targets,
+			LinkedList<Action> actions) {
+
+		for (State s : states) {
+			if (s.row == row && s.col == col) {
+				if (s.targets.size() == targets.size()) {
+					boolean match = true;
+					for (Position t1 : targets) {
+						boolean foundOne = false;
+						for (Position t2 : s.targets) {
+							if (t1.getRow() == t2.getRow() && t1.getCol() == t2.getCol()) {
+								foundOne = true;
+							}
+						}
+						if (!foundOne)
+							match = false;
+					}
+					if (match) {
+						// if the size of the path of the one we are adding is greater, then dont add it
+						if (actions.size() > s.actions.size())
+							return true;
+					}
+
+				}
 			}
 		}
 		return false;
@@ -427,14 +580,25 @@ public class Robot {
 		return false;
 	}
 
-	public void removesPosition(LinkedList<Position> positions, int row, int col) {
+	public void removesState(Queue<State> positions, int row, int col) {
+		for (State p : positions) {
+			if (p.row == row && p.col == col) {
+				positions.remove(p);
+				break;
+			}
+		}
+	}
+
+	public LinkedList<Position> removesPosition(LinkedList<Position> positions, int row, int col) {
 		for (int i = 0; i < positions.size(); i++) {
 			Position p = positions.get(i);
 			if (p.getRow() == row && p.getCol() == col) {
 				positions.remove(i);
-				break;
+				return positions;
 			}
 		}
+		return positions;
+
 	}
 
 	public class AState implements Comparable<AState> {
@@ -446,21 +610,21 @@ public class Robot {
 		LinkedList<Position> targets;
 
 		// private LinkedList<Position> targets;
-		public AState(int row, int col, int finalCost, int cost, LinkedList<Action> actions) {
+		public AState(int row, int col,  LinkedList<Action> actions) {
 			this.row = row;
 			this.col = col;
-			this.finalF = finalCost;
-			this.currentF = cost;
+			this.finalF = 0;
+			// this.currentF = cost;
 			this.actions = actions;
 			// this.targets =targets;
 		}
 
-		public AState(int row, int col, int finalCost, int cost, LinkedList<Action> actions,
+		public AState(int row, int col,  LinkedList<Action> actions,
 				LinkedList<Position> targets) {
 			this.row = row;
 			this.col = col;
-			this.finalF = finalCost;
-			this.currentF = cost;
+			this.finalF = 0;
+			// this.currentF = cost;
 			this.actions = actions;
 			this.targets = targets;
 		}
@@ -486,10 +650,11 @@ public class Robot {
 	public int calculateH(AState s, Position t) {
 		if (t == null) {
 			LinkedList<Position> targets = (LinkedList<Position>) s.targets.clone();
-			Position p = targets.poll();
-			if (p == null)
-				return 0;
-			return manhattanDist(s.row, s.col, p);
+//			Position p = targets.poll();
+//			if (p == null)
+//				return 0;
+//			return manhattanDist(s.row, s.col, p);
+			return targets.size();
 		} else
 			return manhattanDist(s.row, s.col, t);
 	}
