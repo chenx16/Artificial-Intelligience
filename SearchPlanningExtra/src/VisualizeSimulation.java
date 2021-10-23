@@ -52,11 +52,10 @@ public class VisualizeSimulation extends JFrame {
 		Environment env = new Environment(map, robotPos); // Modify for multiple robots MIW
 		Robot robot = new Robot(env, robotPos.getRow(), robotPos.getCol());
 		// TODO: Change the following to the search algorithm you are testing.
-		System.out.print("sbbbbbbbbbbbbbbbbbbb");
-		//robot.bfsM();
+		robot.bfsM();
 		//robot.bfs();
 		//robot.astar();
-		robot.astarM();
+//		robot.astarM();
 	
 		ArrayList<Robot> robots = new ArrayList<Robot>();
 		robots.add(robot);
