@@ -99,59 +99,44 @@ public class Robot {
 	 * 
 	 */
 	public void bfs() {
-		// System.out.print("bbbbbbbbbbbbbbbbbbb\n");
 		Queue<State> open = new LinkedList<>();
 		LinkedList<State> closed = new LinkedList<>();
 		open.add(new State(posRow, posCol, new LinkedList<Action>()));
-		// this.openCount++;
+		this.openCount++;
 		while (!open.isEmpty()) {
 			State cell = open.poll();
 			closed.add(cell);
-			// System.out.print(cell.col + "," + cell.row + "; " + " ");
-			// TileStatus status = this.env.getTileStatus(cell.row, cell.col);
 			if (cell.row == env.getTargetRow() && cell.col == env.getTargetCol()) {
-				// System.out.println(cell.row+" "+ cell.col+"");
+				
 				this.pathFound = true;
 				this.path = cell.getActions();
 				this.pathLength = this.path.size();
-				// System.out.print(pathLength);
-				/*
-				 * for (int i = 0; i < pathLength; i++) { System.out.println(path.get(i)); }
-				 */
+				
 				return;
 
 			}
 			for (int i = 0; i < 4; i++) {
 				int row = cell.row + this.rowD[i];
 				int col = cell.col + this.colD[i];
-				// for Map3
-				// only checks open
-				// if (env.validPos(row, col) && !containsState((LinkedList<State>) open, row,
-				// col)) {
-
-				// only checks closed
-				// if (env.validPos(row, col) && !containsState(closed, row, col)) {
-
-				// check both
+				
 				if (env.validPos(row, col) && !containsState((LinkedList<State>) open, row, col)
 						&& !containsState(closed, row, col)) {
 					LinkedList<Action> nxt = (LinkedList<Action>) cell.getActions().clone();
 					if (i == 0) {
 						nxt.add(Action.MOVE_UP);
-						// this.openCount++;
+						
 					} else if (i == 1) {
-						// this.openCount++;
+						
 						nxt.add(Action.MOVE_RIGHT);
 					} else if (i == 2) {
-						// this.openCount++;
+						
 						nxt.add(Action.MOVE_DOWN);
 					} else if (i == 3) {
-						// this.openCount++;
+						
 						nxt.add(Action.MOVE_LEFT);
 					}
 
 					open.add(new State(row, col, nxt));
-					// System.out.println(row+" "+ col);
 					this.openCount++;
 				}
 
@@ -186,7 +171,6 @@ public class Robot {
 		while (!open.isEmpty()) {
 			State cell = open.poll();
 			// System.out.println(cell.row + "," + cell.col + "; " + " ");
-			// TileStatus status = this.env.getTileStatus(cell.row, cell.col);
 			closed.add(cell);
 
 			if (containsPosition(cell.targets, cell.row, cell.col)) {
@@ -421,21 +405,7 @@ public class Robot {
 		}
 	}
 
-	public boolean subsetOf(LinkedList<Position> targets1, LinkedList<Position> targets2) {
-		// return true if targets1 is a subset of targets2
-		int x = 0;
-		int l = targets1.size();
-		for (Position p : targets1) {
-			for (Position p2 : targets2) {
-				if (x == l)
-					return true;
-				if (p.getRow() == p2.getRow() && p.getCol() == p2.getCol()) {
-					x++;
-				}
-			}
-		}
-		return false;
-	}
+
 
 	public boolean containsPosition(LinkedList<Position> positions, int row, int col) {
 		for (Position p : positions) {
@@ -492,63 +462,6 @@ public class Robot {
 		return false;
 	}
 
-	public boolean containsState(LinkedList<State> states, int row, int col, LinkedList<Position> targets,
-			LinkedList<Action> actions) {
-
-		for (State s : states) {
-			if (s.row == row && s.col == col) {
-				if (s.targets.size() == targets.size()) {
-					boolean match = true;
-					for (Position t1 : targets) {
-						boolean foundOne = false;
-						for (Position t2 : s.targets) {
-							if (t1.getRow() == t2.getRow() && t1.getCol() == t2.getCol()) {
-								foundOne = true;
-							}
-						}
-						if (!foundOne)
-							match = false;
-					}
-					if (match) {
-						// if the size of the path of the one we are adding is greater, then dont add it
-						if (actions.size() > s.actions.size())
-							return true;
-					}
-
-				}
-			}
-		}
-		return false;
-	}
-
-	public boolean containsState(Queue<State> states, int row, int col, LinkedList<Position> targets,
-			LinkedList<Action> actions) {
-
-		for (State s : states) {
-			if (s.row == row && s.col == col) {
-				if (s.targets.size() == targets.size()) {
-					boolean match = true;
-					for (Position t1 : targets) {
-						boolean foundOne = false;
-						for (Position t2 : s.targets) {
-							if (t1.getRow() == t2.getRow() && t1.getCol() == t2.getCol()) {
-								foundOne = true;
-							}
-						}
-						if (!foundOne)
-							match = false;
-					}
-					if (match) {
-						// if the size of the path of the one we are adding is greater, then dont add it
-						if (actions.size() > s.actions.size())
-							return true;
-					}
-
-				}
-			}
-		}
-		return false;
-	}
 
 	public boolean containsState(Queue<State> states, int row, int col) {
 		for (State s : states) {
@@ -729,22 +642,6 @@ public class Robot {
 		return Math.abs(row - t.getRow()) + Math.abs(col - t.getCol());
 	}
 
-	/*
-	 * // F(n) = g(n) + h(n). public int calculateF(AState s, Position target) {
-	 * return calculateG(s) + calculateH(s, target); }
-	 */
-	public Position getClosestTarget(LinkedList<Position> targets, int row, int col) {
-		Position toreturn = new Position(0, 0);
-		int minD = 100;
-		for (Position p : targets) {
-			int dist = manhattanDist(row, col, p);
-			if (dist < minD) {
-				toreturn.setCol(p.getCol());
-				toreturn.setRow(p.getRow());
-				minD = dist;
-			}
-		}
-		return toreturn;
-	}
+
 
 }
