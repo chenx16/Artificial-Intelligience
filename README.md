@@ -144,13 +144,9 @@ Parsing. Continue modifying the parsing unit of the first milestone to make it m
 
   discourse>Please/UH
   
-  obl:to>[space/NN
+  obl:to>[space/NN case>to/IN det>the/DT nmod:on
   
-          case>to/IN
-	  
-	  det>the/DT
-	  
-	  nmod:on>[right/NN case>on/IN nmod:poss>your/PRP$]]
+  >[right/NN case>on/IN nmod:poss>your/PRP$]]
 	  
   punct>./.]
   
