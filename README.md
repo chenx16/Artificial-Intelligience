@@ -111,3 +111,95 @@ Small phrases that include the directions. For example, your system should be ab
 Only return actions, if the instruction makes sense. For example, if the user enters "Pick up right" then DO_NOTHING should be returned.
 
 All the procession must be accomplished by processing the SemanticGraph object as well as its derivations as returned by the Stanford Parser. You are not permitted to process the String returned by the Scanner, except for what is in the given code, i.e. to have the parser produce a SemanticGraph object from it.
+
+## Milestone 2: Dialog
+### Objectives
+A key aspect of any collaboration, whether among humans or whether for a human-robot system, is to maintain a dialog. As part of that dialog, requests are issued, acknowledgments are given, clarification is sought and encouragement is given. For this milestone, you will turn the rudimentary NLP processing into something that can maintain a simple dialog.
+### Assignment
+Continue work on the HRC project. You will extend the functionality of the NLP component in several ways. In particular, following the design of ELIZA, you will implement three different phases of input processing: at first, your system will attempt to parse the user input with the Stanford parser. If that does not lead to an actionable result, then it will attempt to perform a keyword search on the input string. If this does not lead to an actionable result either, then your system will ask for clarification.
+
+Parsing. Continue modifying the parsing unit of the first milestone to make it more robust. This inlcudes the following capabilities:
+
+[8 pts] The ability to tell the robot to repeat a command, such as: "again," "do that again," "more left," "further left." Your software will need to store the prior command.
+
+[8 pts] The ability to tell the robot to undo the prior move command, such as: "undo," "go back." Your software will need to store the prior command.
+
+[10 pts] The ability to deal with negation. If the user inputs "not left," or "do not go left," etc. the robot should not go left. It should stay put.
+
+[30 pts] Your software should be able to parse any sentence in which the VB is "clean" or "move", but only those sentences that make sense. This unit should be fairly iron clad. You want to study the output of the graph.prettyPrint() command to understand the structure of the graph and what to look for where. Below are few examples. Notice that the third example is grammatically incorrect but likely a spelling error. Please cover some of those cases and correct them to the intended command.
+
+> Please move to the right space.
+[move/VB
+  discourse>Please/UH
+  obl:to>[space/NN case>to/IN det>the/DT amod>right/JJ]
+  punct>./.]
+> Please move to the space on your right.
+[move/VB
+  discourse>Please/UH
+  obl:to>[space/NN
+          case>to/IN
+	  det>the/DT
+	  nmod:on>[right/NN case>on/IN nmod:poss>your/PRP$]]
+  punct>./.]
+> Please move to the space on you right.
+[move/VB
+  discourse>Please/UH
+  obl:to>[space/NN case>to/IN det>the/DT]
+  obl:on>[you/PRP case>on/IN]
+  advmod>right/RB
+  punct>./.]
+  
+[20 pts] Keyword search. For this component, search the original string for the keywords "up," "down," "left," "right" and "clean." If any of them are present, then tell the user (by print or speech) something along the lines of "I think you want me to ..." and return that action. Please have at least five variations of the phrase that you prepend to the named action.
+
+[10 pts] Random response. For this component, select one of ten different phrases that indicates to the user that the system was not able to process the input and to ask for clarification.
+
+[14 pts] Human-robot Interaction (HRI). To maintain a friendly and collaborative environment, add to the dialog the following items and give the robot some personality. For all them components below, use the parse tree.
+
+Ask the robot for their name. Ensure the robot can reply to it.
+
+If the robot does not have a name, consider giving it a name and ensure the robot can remember it.
+
+Use the robot's name ever so often when giving feedback.
+
+Praise the robot ever so often. Use at least three different praise phrases.
+
+In addition to returning an action, output an acknowledgement, indicating that the robot was able to successfully parse the input. Randomly choose among five different phrases, such as "Got it.", "Ja ja" or "Roger that." If you are a fan of "Smokey and the Bandit," you may add "10-4."
+
+[10 pts] Extra credit: Add a speech-to-text component. There are several options, including Google's and Microsoft's APIs as well as FreeTTs.
+
+[10 pts] Extra credit: Add a text-to-speech component. Here too are sevaral options available.
+
+## Milestone 3: Remembering and Analogy
+### Objectives
+For this milestone, you will extend the capabilties of the robot by asking it to remember plans, by developing plans from existing plans and by modifying plans through simple analogical transformations.
+### Assignment
+Continue work on the HRC project.
+
+[20 pts] Spelling and Grammar Errors
+
+Modify your Robot.java file so as to simplify the handling of capitalization. Consider converting all input to lower case and only procress lower-case text.
+
+Process common spelling errors by maintaing a list of them and checking key input words against them. Submit the string with the corrected words to the parser.
+
+Modify the processing of the semantic graph object to address common grammar errors, such as reordering of words. Cover at least five grammar errors.
+
+[35 pts] Recording and Recalling Plans
+
+When the user issues a command such as “begin record”, the robot executes and records actions until the user issues a command such as “end record.”
+
+Following the "end record" command, the system asks the uer for a name of the recorded plan. The system will store the plan under that name.
+
+When the user issues a command like: “execute plan Bob” the system will execute the current plan from the current position of the robot. Please notice that most likely you have to temporarily deactivate the read-evaluate-return loop, until the plan is executed to its completion. Please notice that you do not have to worry about error recovery, as the system itself will not let you walk into walls or off the side of the grid.
+
+[15 pts] Symmetry
+Add the ability to recall a plan in which all instructions are symmetric. For example, if the user states: “execute symmetric plan Bob” then the system will execute the stored plan, except that all occurrences of up are replaced with down and vice versa and all occurrences with left are replaced with right and vice versa.
+
+[30 pts] Robot autonomy
+Instruct the robot to clean up all or a portion of the dirty tiles. Please use your bfsM or astarM procedures. You should be able to specify the following options.
+
+Clean all remaining dirty tiles.
+
+Specify a list of tiles by coordinates.
+
+Specify a rectangle of tiles. If the rectangle includes walls, that will be fine, however, your robot should not bang it's head against walls.
+Submission
