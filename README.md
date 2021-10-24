@@ -129,24 +129,43 @@ Parsing. Continue modifying the parsing unit of the first milestone to make it m
 [30 pts] Your software should be able to parse any sentence in which the VB is "clean" or "move", but only those sentences that make sense. This unit should be fairly iron clad. You want to study the output of the graph.prettyPrint() command to understand the structure of the graph and what to look for where. Below are few examples. Notice that the third example is grammatically incorrect but likely a spelling error. Please cover some of those cases and correct them to the intended command.
 
 > Please move to the right space.
+
 [move/VB
+
   discourse>Please/UH
+  
   obl:to>[space/NN case>to/IN det>the/DT amod>right/JJ]
+  
   punct>./.]
+  
 > Please move to the space on your right.
+
 [move/VB
+
   discourse>Please/UH
+  
   obl:to>[space/NN
+  
           case>to/IN
+	  
 	  det>the/DT
+	  
 	  nmod:on>[right/NN case>on/IN nmod:poss>your/PRP$]]
+	  
   punct>./.]
+  
 > Please move to the space on you right.
+
 [move/VB
+
   discourse>Please/UH
+  
   obl:to>[space/NN case>to/IN det>the/DT]
+  
   obl:on>[you/PRP case>on/IN]
+  
   advmod>right/RB
+  
   punct>./.]
   
 [20 pts] Keyword search. For this component, search the original string for the keywords "up," "down," "left," "right" and "clean." If any of them are present, then tell the user (by print or speech) something along the lines of "I think you want me to ..." and return that action. Please have at least five variations of the phrase that you prepend to the named action.
