@@ -1,8 +1,11 @@
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Scanner;
-
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.IndexedWord;
 import edu.stanford.nlp.pipeline.Annotation;
@@ -26,7 +29,8 @@ public class Robot {
 	private Environment env;
 	private int posRow;
 	private int posCol;
-
+	private int colD[] = { 0, 1, 0, -1 };
+	private int rowD[] = { -1, 0, 1, 0 };
 	private Properties props;
 	private StanfordCoreNLP pipeline;
 	private Action prevAct = Action.DO_NOTHING;
@@ -37,7 +41,19 @@ public class Robot {
 	private String[] praise = { "No problem!", "Thank you! I've tried my best!", "Glad to privide service for you!",
 			"Happy to work with you!", "Thanks, nice to meet you!" };
 	private String[] reponses = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "OK!" };
+	private String[] spellingerrors = { "rite", "wright", "write", "mov", "muv", "op", "doen", "dawn", "cleen", "ledr",
+			"lft" };
 	private boolean ifNaming = false;
+	private boolean isRecording;
+	private boolean isExecuting;
+	private boolean isNamingPlan;
+	private boolean isAutoCleaning;
+	private Queue<Action> path;
+	private HashMap<String, LinkedList<Action>> recordedP;
+	private LinkedList<Action> currentP;
+	private Iterator<Action> pathIterator;
+	private boolean isCleanCoor;
+	private boolean isCleanRect;
 
 	/**
 	 * Initializes a Robot on a specific tile in the environment.
@@ -48,12 +64,34 @@ public class Robot {
 		this.posRow = posRow;
 		this.posCol = posCol;
 		this.myname = null;
+		this.path = new LinkedList<Action>();
+		this.isRecording = false;
+		this.isExecuting = false;
+		this.isNamingPlan = false;
+		this.isAutoCleaning = false;
+		this.isCleanCoor = false;
+		this.isCleanRect = false;
 		this.actPrepends = new String[5];
 		this.clarifications = new String[10];
+		this.currentP = new LinkedList<Action>();
+		this.recordedP = new HashMap<>();
 		props = new Properties();
 		props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse");
 		pipeline = new StanfordCoreNLP(props);
 
+	}
+
+	public LinkedList<Position> getTargets() {
+		LinkedList<Position> targets = env.getTargets();
+		Tile[][] map = this.env.getTiles();
+		for (int row = 0; row < this.env.getRows(); row++) {
+			for (int col = 0; col < this.env.getCols(); col++) {
+				Tile tile = map[row][col];
+				if (tile.getStatus() == TileStatus.DIRTY)
+					targets.add(new Position(row, col));
+			}
+		}
+		return targets;
 	}
 
 	public int getPosRow() {
@@ -80,6 +118,77 @@ public class Robot {
 		posCol--;
 	}
 
+	public LinkedList<Position> coordinatesToTargets(String s) {
+		// (1,2),(3,4)
+		LinkedList<Position> l = new LinkedList<Position>();
+		int r = 0;
+		int c = 0;
+		boolean create = false;
+		for (int i = 0; i < s.length(); i++) {
+			if (s.charAt(i) != ',' && s.charAt(i) != '(' && s.charAt(i) != ')') {
+				if (create) {
+//					System.out.println(r + " " + c);
+					l.add(new Position(r, c));
+					create = false;
+				}
+				if (s.charAt(i - 1) == '(') {
+					r = Character.getNumericValue(s.charAt(i));
+//					System.out.println(r + " ");
+				} else if (s.charAt(i - 1) == ',') {
+					c = Character.getNumericValue(s.charAt(i));
+//					System.out.println(" " + c);
+					create = true;
+				}
+			}
+
+		}
+
+		l.add(new Position(r, c));
+		// System.out.println(r + " " + c);
+		return l;
+	}
+
+	public LinkedList<Position> rectsToTargets(String s) {
+		// (1,2),(3,4)
+		Tile[][] map = this.env.getTiles();
+		if (s.length() != 11) {
+			System.out.println("Entered wrong coordinates");
+		}
+		LinkedList<Position> l = new LinkedList<Position>();
+		LinkedList<Position> ts = new LinkedList<Position>();
+		int r = 0;
+		int c = 0;
+		boolean create = false;
+		for (int i = 0; i < s.length(); i++) {
+			if (s.charAt(i) != ',' && s.charAt(i) != '(' && s.charAt(i) != ')') {
+				if (create) {
+//					System.out.println(r + " " + c);
+					l.add(new Position(r, c));
+					create = false;
+				}
+				if (s.charAt(i - 1) == '(') {
+					r = Character.getNumericValue(s.charAt(i));
+//					System.out.println(r + " ");
+				} else if (s.charAt(i - 1) == ',') {
+					c = Character.getNumericValue(s.charAt(i));
+//					System.out.println(" " + c);
+					create = true;
+				}
+			}
+
+		}
+
+		l.add(new Position(r, c));
+		for (int i = Math.min(l.get(0).row, l.get(1).row); i < Math.max(l.get(0).row, l.get(1).row) + 1; i++) {
+			for (int j = Math.min(l.get(0).col, l.get(1).col); j < Math.max(l.get(0).col, l.get(1).col) + 1; j++) {
+				Tile tile = map[i][j];
+				if (tile.getStatus() == TileStatus.DIRTY)
+					ts.add(new Position(i, j));
+			}
+		}
+		return ts;
+	}
+
 	public void updateactPrepend() {
 		this.actPrepends[0] = "I think you want me to ";
 		this.actPrepends[1] = this.myname + " is going to ";
@@ -90,7 +199,8 @@ public class Robot {
 	}
 
 	public void updateactClarification() {
-		this.clarifications[0] = "I知 sorry but I知 not sure I understand. Could you say it in another way for " + this.myname + "?";
+		this.clarifications[0] = "I知 sorry but I知 not sure I understand. Could you say it in another way for "
+				+ this.myname + "?";
 		this.clarifications[1] = "I didn't quite get that. Can you clarify that for " + this.myname + "?";
 		this.clarifications[2] = "Sorry, could you rephrase that for " + this.myname + "?";
 		this.clarifications[3] = "I didn't catch that, could you please try one more time?";
@@ -98,8 +208,47 @@ public class Robot {
 		this.clarifications[5] = "I didn't understand that. Please try something else.";
 		this.clarifications[6] = "Sorry, what do you want " + this.myname + " to do?";
 		this.clarifications[7] = "Sorry, could you be more specific?";
-		this.clarifications[8] = "Sorry, " + this.myname + " is confused about what you said, could you please try again?";
+		this.clarifications[8] = "Sorry, " + this.myname
+				+ " is confused about what you said, could you please try again?";
 		this.clarifications[9] = "I'm not sure what you want me to do, could you make it more clear?";
+	}
+
+	private void checkForExecutePlan(String input) {
+		String plan;
+		if (input.contains("execute plan ")) {
+			plan = input.substring(13, input.length());
+
+			System.out.println("Executing plan " + plan);
+			if (this.recordedP.isEmpty() || this.recordedP.get(plan) == null) {
+				System.out.println("Plan is not recorded");
+				return;
+			}
+			this.currentP = this.recordedP.get(plan);
+
+			if (this.currentP == null) {
+				System.out.println("No path found");
+			}
+
+			this.isExecuting = true;
+			this.pathIterator = this.currentP.iterator();
+		} else if (input.contains("execute symmetric plan ")) {
+			plan = input.substring(23, input.length());
+
+			System.out.println("Executing symmetric plan " + plan);
+			if (this.recordedP.isEmpty() || this.recordedP.get(plan) == null) {
+				System.out.println("Plan is not recorded");
+				return;
+			}
+			this.currentP = this.symmatric(this.recordedP.get(plan));
+
+			if (this.currentP == null) {
+				System.out.println("No path found");
+			}
+
+			this.isExecuting = true;
+			this.pathIterator = this.currentP.iterator();
+		}
+
 	}
 
 	/**
@@ -108,24 +257,41 @@ public class Robot {
 	 * functions.
 	 */
 	public Action getAction() {
+
 		Annotation annotation;
 		if (this.myname == null && !this.ifNaming) {
 			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
 		}
+		if (this.isExecuting) {
+			if (this.pathIterator.hasNext()) {
+				return this.pathIterator.next();
+			} else {
+				this.isExecuting = false;
+			}
+		}
+		if (isNamingPlan) {
+			System.out.println("Please Enter Your Plan Name:");
+
+		}
+		if (isAutoCleaning) {
+			if (!this.path.isEmpty()) {
+
+				return this.path.poll();
+			} else {
+				this.isCleanCoor = false;
+				this.isCleanRect = false;
+				this.isAutoCleaning = false;
+			}
+		}
+
 		System.out.print("> ");
 		sc = new Scanner(System.in);
 		String name = sc.nextLine();
 //	    System.out.println(name);
-
+		name = name.toLowerCase();
 		annotation = new Annotation(name);
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-		if (name.contains("not")) {
-			System.out.println(getRandom(this.reponses));
-			System.out.println("Sure, do nothing.");
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
 		if (this.myname == null && !this.ifNaming) {
 			this.ifNaming = true;
 			this.myname = name;
@@ -136,11 +302,86 @@ public class Robot {
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
+		if (isCleanCoor) {
+			System.out.println("Automated Clean Coordinates if dirty");
+			bfsM(this.coordinatesToTargets(name));
+			this.isAutoCleaning = true;
+			return Action.DO_NOTHING;
+		}
+		if (isCleanRect) {
+			System.out.println("Automated Clean dirty tile in the rectangle");
+			LinkedList<Position> s = this.coordinatesToTargets(name);
+			bfsM(this.rectsToTargets(name));
+			this.isAutoCleaning = true;
+			return Action.DO_NOTHING;
+		}
+		if (name.contains("begin record") && !this.isRecording) {
+			this.isRecording = true;
+			this.currentP.clear();
+			System.out.println("Recording started");
+			return Action.DO_NOTHING;
+		}
+		if (name.contains("auto clean")) {
+			System.out.println("Automated Cleaning started");
+			bfsM(this.getTargets());
+			this.isAutoCleaning = true;
+			return Action.DO_NOTHING;
+		}
+		if (name.contains("clean coordinates")) {
+			System.out.println("Please enter coordinates in the form: (a,b),(c,d)");
+			this.isCleanCoor = true;
+			return Action.DO_NOTHING;
+		}
+		if (name.contains("clean rectangle")) {
+			System.out.println(
+					"Please enter coordinates in the form: (upperleft x,upperleft y),(lowerright x,lowerright y)");
+			this.isCleanRect = true;
+			return Action.DO_NOTHING;
+		}
+		if (this.isRecording) {
+			System.out.println("Recording path");
+			// check for end record tag
+			if (prevAct != null) {
+				this.currentP.add(this.prevAct);
+				// System.out.println(this.prevAct);
+			}
+			if (name.contains("end record")) {
+				this.isRecording = false;
+				this.isNamingPlan = true;
+				this.currentP.remove(0);
+				System.out.println("Recording finished");
+				return Action.DO_NOTHING;
+			}
+
+		}
+		if (this.isNamingPlan) {
+			this.recordedP.put(name, currentP);
+			System.out.println("Named the plan " + name);
+			this.isNamingPlan = false;
+			return Action.DO_NOTHING;
+		}
+		this.checkForExecutePlan(name);
+
+		// execute paths
+		if (this.isExecuting) {
+			if (this.pathIterator.hasNext()) {
+				return this.pathIterator.next();
+			} else {
+				this.isExecuting = false;
+			}
+		}
+		if (name.contains("not") || name.contains("don't")) {
+			System.out.println(getRandom(this.reponses));
+			System.out.println("Sure, do nothing.");
+			this.prevAct = Action.DO_NOTHING;
+			return Action.DO_NOTHING;
+		}
+
 		if (sentences != null && !sentences.isEmpty()) {
 			CoreMap sentence = sentences.get(0);
 			SemanticGraph graph = sentence
 					.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
-			// graph.prettyPrint();
+//			graph.prettyPrint();
 			IndexedWord root = graph.getFirstRoot();
 			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
 			String type = root.tag();
@@ -154,6 +395,8 @@ public class Robot {
 				return processVB(graph, root);
 			case "JJR": // root is more, more up
 				return processVB(graph, root);
+			case "NN": // root is more, more up
+				return processVB(graph, root);
 			default:
 				return processSingleWord(name, root, graph);
 			}
@@ -165,15 +408,16 @@ public class Robot {
 	}
 
 	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
-		// System.out.println("Processing Single Word");
+		System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
+		todo = spellingErrorChecking(todo);
 
 		if (todo.equalsIgnoreCase("again") || todo.equalsIgnoreCase("repeat")) {
 			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
-			System.out.println(this.prevAct);
+			// System.out.println(this.prevAct);
 			return this.prevAct;
-		} else if (name.contains("clean")) {
+		} else if (name.contains("clean") || todo.equalsIgnoreCase("clean")) {
 			System.out.println(getRandom(this.reponses));
 			System.out.print(getRandom(this.actPrepends));
 			System.out.println("clean.");
@@ -205,9 +449,11 @@ public class Robot {
 		// if verb close to clean, then go clean (In "please clean" command, clean is a
 		// verb)
 
-		// System.out.println("Command: " + root.toString());
+//		System.out.println("Command: " + root.toString());
 		String todo = root.originalText().toLowerCase();
 		// filtering pick up
+		todo = spellingErrorChecking(todo);
+//		System.out.println(todo);
 		if (todo.equalsIgnoreCase("pick")) {
 			System.out.println("No, pick isn't valid.");
 			System.out.println(getRandom(this.clarifications));
@@ -237,14 +483,14 @@ public class Robot {
 		}
 
 		List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
-		//System.out.println(pairs.toString());
+		// System.out.println(pairs.toString());
 
 		for (Pair<GrammaticalRelation, IndexedWord> pair : pairs) {
 
 			String word = pair.second.originalText().toLowerCase();
 			// List<Pair<GrammaticalRelation, IndexedWord>> pair = graph.childPairs(word);
 			// System.out.println(pair.toString());
-
+			word = spellingErrorChecking(word);
 			if (word.equalsIgnoreCase("left")) {
 				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
@@ -278,7 +524,7 @@ public class Robot {
 			} else if (word.equalsIgnoreCase("again")) {
 				System.out.println(getRandom(this.reponses));
 				System.out.print(getRandom(this.actPrepends));
-				System.out.println(this.prevAct);
+				// System.out.println(this.prevAct);
 				return this.prevAct;
 			} else if (word.equalsIgnoreCase("back")) {
 				System.out.println(getRandom(this.reponses));
@@ -292,6 +538,7 @@ public class Robot {
 			if (innerpair.size() != 0) {
 				for (Pair<GrammaticalRelation, IndexedWord> p : innerpair) {
 					String inword = p.second.originalText().toLowerCase();
+					inword = spellingErrorChecking(inword);
 					if (inword.equalsIgnoreCase("left")) {
 						System.out.println(getRandom(this.reponses));
 						System.out.print(getRandom(this.actPrepends));
@@ -334,6 +581,7 @@ public class Robot {
 	}
 
 	public Action basicMoves(String todo) {
+		todo = spellingErrorChecking(todo);
 		// System.out.println("basic moving" + todo);
 		if (todo.equalsIgnoreCase("left")) {
 			System.out.println(getRandom(this.reponses));
@@ -365,6 +613,27 @@ public class Robot {
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
+	}
+
+	public LinkedList<Action> symmatric(LinkedList<Action> actions) {
+		LinkedList<Action> toreturn = new LinkedList<Action>();
+		for (int i = 0; i < actions.size(); i++) {
+			Action curr = actions.get(i);
+			if (curr.equals(Action.MOVE_RIGHT)) {
+				toreturn.add(i, Action.MOVE_LEFT);
+			} else if (curr.equals(Action.MOVE_LEFT)) {
+				toreturn.add(i, Action.MOVE_RIGHT);
+			} else if (curr.equals(Action.MOVE_UP)) {
+				toreturn.add(i, Action.MOVE_DOWN);
+			} else if (curr.equals(Action.MOVE_DOWN)) {
+				toreturn.add(i, Action.MOVE_UP);
+			} else if (curr.equals(Action.DO_NOTHING)) {
+				toreturn.add(i, Action.DO_NOTHING);
+			} else if (curr.equals(Action.CLEAN)) {
+				toreturn.add(i, Action.DO_NOTHING);
+			}
+		}
+		return toreturn;
 	}
 
 	public Action negateMoves() {
@@ -438,9 +707,219 @@ public class Robot {
 		return false;
 	}
 
+	private String spellingErrorChecking(String s) {
+		for (String check : this.spellingerrors) {
+			if (s.equals(check)) {
+				switch (s) {
+				case "rite":
+					return "right";
+				case "wright":
+					return "right";
+				case "write":
+					return "right";
+				case "mov":
+					return "move";
+				case "op":
+					return "up";
+				case "dawn":
+					return "down";
+				case "doen":
+					return "down";
+				case "cleen":
+					return "clean";
+				case "ledr":
+					return "left";
+				case "lft":
+					return "left";
+
+				}
+
+			}
+
+		}
+		return s;
+	}
+
 	private static String getRandom(String[] array) {
 		int randomarray = new Random().nextInt(array.length);
 		return array[randomarray];
+	}
+
+	public boolean containsState(LinkedList<State> states, int row, int col) {
+		for (State s : states) {
+			if (s.row == row && s.col == col) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean containsPosition(LinkedList<Position> positions, int row, int col) {
+		for (Position p : positions) {
+			if (p.row == row && p.col == col) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public LinkedList<Position> removesPosition(LinkedList<Position> positions, int row, int col) {
+		for (int i = 0; i < positions.size(); i++) {
+			Position p = positions.get(i);
+			if (p.row == row && p.col == col) {
+				positions.remove(i);
+				return positions;
+			}
+		}
+		return positions;
+
+	}
+
+	public boolean containsState(LinkedList<State> states, State check) {
+		for (State s : states) {
+			if (s.row == check.row && s.col == check.col && this.sameTargets(s.targets, check.targets)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean containsState(Queue<State> states, State check) {
+		for (State s : states) {
+			if (s.row == check.row && s.col == check.col && this.sameTargets(s.targets, check.targets)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean sameTargets(LinkedList<Position> targets1, LinkedList<Position> targets2) {
+		int l = targets1.size();
+		if (l != targets2.size())
+			return false;
+
+		int k = 0;
+		for (Position p1 : targets1) {
+			for (Position p2 : targets2) {
+				if (p1.row == p2.row && p1.col == p2.col) {
+					k++;
+					break;
+				}
+			}
+		}
+		if (k == l)
+			return true;
+		return false;
+	}
+
+	public void bfsM(LinkedList<Position> targets) {
+		// TODO: Implement this method
+		// LinkedList<Action> actions = new LinkedList<>();
+		// contains, if it contains, remove
+		Queue<State> open = new LinkedList<>();
+		LinkedList<State> closed = new LinkedList<>();
+		open.add(new State(posRow, posCol, new LinkedList<Action>(), targets));
+
+		while (!open.isEmpty()) {
+			State cell = open.poll();
+			// System.out.println(cell.row + "," + cell.col + "; " + " ");
+			// TileStatus status = this.env.getTileStatus(cell.row, cell.col);
+			closed.add(cell);
+
+			if (containsPosition(cell.targets, cell.row, cell.col)) {
+				LinkedList<Position> newtargets = removesPosition(cell.targets, cell.row, cell.col);
+				cell.setTargets(newtargets);
+				cell.actions.add(Action.CLEAN);
+			}
+
+			if (cell.targets.size() == 0) {
+				this.path = cell.getActions();
+				return;
+			}
+
+			for (int i = 0; i < 4; i++) {
+				int row = cell.row + this.rowD[i];
+				int col = cell.col + this.colD[i];
+
+				if (!env.validPos(row, col)) {
+					continue;
+				}
+				LinkedList<Position> newtargets = (LinkedList<Position>) cell.targets.clone();
+				LinkedList<Action> as = (LinkedList<Action>) cell.getActions().clone();
+				State nxt = new State(row, col, as, newtargets);
+				this.addAction(nxt.actions, i);
+				if (containsPosition(newtargets, row, col)) {
+					nxt.actions.add(Action.CLEAN);
+					newtargets = removesPosition(newtargets, row, col);
+					nxt.setTargets(newtargets);
+					// this.addAction(nxt.actions, i);
+				}
+
+				if (nxt.targets.size() == 0) {
+					this.path = nxt.getActions();
+					return;
+				}
+
+				if (!containsState(closed, nxt) && !containsState(open, nxt)) {
+					// this.addAction(nxt.actions, i);
+					open.add(nxt);
+				}
+
+			}
+
+		}
+
+		if (open.isEmpty())
+			return;
+
+	}
+
+	public void addAction(LinkedList<Action> as, int i) {
+		if (i == 0) {
+			as.add(Action.MOVE_UP);
+
+		} else if (i == 1) {
+			as.add(Action.MOVE_RIGHT);
+
+		} else if (i == 2) {
+			as.add(Action.MOVE_DOWN);
+
+		} else {
+			as.add(Action.MOVE_LEFT);
+
+		}
+	}
+
+	public class State {
+		private int row;
+		private int col;
+		private LinkedList<Action> actions;
+		LinkedList<Position> targets;
+
+		public State(int row, int col, LinkedList<Action> actions) {
+			this.row = row;
+			this.col = col;
+			this.actions = actions;
+		}
+
+		public State(int row, int col, LinkedList<Action> actions, LinkedList<Position> targets) {
+			this.row = row;
+			this.col = col;
+			this.actions = actions;
+			this.targets = targets;
+		}
+
+		public LinkedList<Action> getActions() {
+			return actions;
+		}
+
+		public void setActions(LinkedList<Action> actions) {
+			this.actions = actions;
+		}
+
+		public void setTargets(LinkedList<Position> targets) {
+			this.targets = targets;
+		}
 	}
 
 }
