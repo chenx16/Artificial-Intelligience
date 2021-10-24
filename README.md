@@ -138,7 +138,7 @@ Parsing. Continue modifying the parsing unit of the first milestone to make it m
   
   punct>./.]
   
-  > Please move to the space on your right.
+  >Please move to the space on your right.
 
 [move/VB
 
@@ -150,7 +150,7 @@ Parsing. Continue modifying the parsing unit of the first milestone to make it m
 	  
   punct>./.]
   
-  > Please move to the space on you right.
+  >Please move to the space on you right.
 
 [move/VB
 
