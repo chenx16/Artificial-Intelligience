@@ -6,14 +6,21 @@ import java.util.Properties;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Scanner;
+
+import org.ejml.simple.SimpleMatrix;
+
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.IndexedWord;
+import edu.stanford.nlp.neural.rnn.RNNCoreAnnotations;
 import edu.stanford.nlp.pipeline.Annotation;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations;
 import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation;
+import edu.stanford.nlp.sentiment.SentimentCoreAnnotations;
+import edu.stanford.nlp.sentiment.SentimentCoreAnnotations.SentimentAnnotatedTree;
 import edu.stanford.nlp.trees.GrammaticalRelation;
+import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.util.Pair;
 
@@ -43,6 +50,10 @@ public class Robot {
 	private String[] reponses = { "Got it.", "Roger that.", "10-4.", "Ja ja.", "OK!" };
 	private String[] spellingerrors = { "rite", "wright", "write", "mov", "muv", "op", "doen", "dawn", "cleen", "ledr",
 			"lft" };
+	private String[] positiveFeedback = { "Thanks a million.", "I truly appreciate you", "Grateful for your support" };
+	private String[] negativeFeedback = { "My Apologies. It’s All My Fault. Developers have done their best.",
+			"Sorry, my Bad. Developers have stayed up late everyday.",
+			"I was wrong. Developers are on their way. Can you forgive me?" };
 	private boolean ifNaming = false;
 	private boolean isRecording;
 	private boolean isExecuting;
@@ -54,6 +65,7 @@ public class Robot {
 	private Iterator<Action> pathIterator;
 	private boolean isCleanCoor;
 	private boolean isCleanRect;
+	private boolean isResponding;
 
 	/**
 	 * Initializes a Robot on a specific tile in the environment.
@@ -65,6 +77,7 @@ public class Robot {
 		this.posCol = posCol;
 		this.myname = null;
 		this.path = new LinkedList<Action>();
+		this.isResponding = false;
 		this.isRecording = false;
 		this.isExecuting = false;
 		this.isNamingPlan = false;
@@ -76,7 +89,7 @@ public class Robot {
 		this.currentP = new LinkedList<Action>();
 		this.recordedP = new HashMap<>();
 		props = new Properties();
-		props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse");
+		props.setProperty("annotators", "tokenize, ssplit, pos, lemma, ner, parse,sentiment");
 		pipeline = new StanfordCoreNLP(props);
 
 	}
@@ -259,6 +272,7 @@ public class Robot {
 	public Action getAction() {
 
 		Annotation annotation;
+		this.isResponding = false;
 		if (this.myname == null && !this.ifNaming) {
 			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
 		}
@@ -292,12 +306,23 @@ public class Robot {
 		annotation = new Annotation(name);
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
+		int sentiment = this.getSentimentResult(sentences);
+		// System.out.println(sentiment);
+		if (sentiment == 1) {
+			System.out.println(getRandom(this.positiveFeedback));
+			this.isResponding = true;
+		} else if (sentiment == -1) {
+			System.out.println(getRandom(this.negativeFeedback));
+			this.isResponding = true;
+		}
+
 		if (this.myname == null && !this.ifNaming) {
 			this.ifNaming = true;
 			this.myname = name;
 			System.out.println(getRandom(this.reponses));
 			System.out.println("Got the name!");
 			updateactPrepend();
+
 			updateactClarification();
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
@@ -403,12 +428,14 @@ public class Robot {
 
 		}
 		System.out.println("Empty sentence.");
-		System.out.println(getRandom(this.clarifications));
+		if (!this.isResponding) {
+			System.out.println(getRandom(this.clarifications));
+		}
 		return Action.DO_NOTHING;
 	}
 
 	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
-		System.out.println("Processing Single Word");
+		// System.out.println("Processing Single Word");
 		String todo = root.originalText().toLowerCase();
 		todo = spellingErrorChecking(todo);
 
@@ -456,7 +483,9 @@ public class Robot {
 //		System.out.println(todo);
 		if (todo.equalsIgnoreCase("pick")) {
 			System.out.println("No, pick isn't valid.");
-			System.out.println(getRandom(this.clarifications));
+			if (!this.isResponding) {
+				System.out.println(getRandom(this.clarifications));
+			}
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
 		}
@@ -574,7 +603,9 @@ public class Robot {
 			}
 
 		}
-		System.out.println(getRandom(this.clarifications));
+		if (!this.isResponding) {
+			System.out.println(getRandom(this.clarifications));
+		}
 		// System.out.println("No, invalid VB, doing nothing");
 		this.prevAct = Action.DO_NOTHING;
 		return Action.DO_NOTHING;
@@ -608,7 +639,9 @@ public class Robot {
 			this.prevAct = Action.MOVE_DOWN;
 			return Action.MOVE_DOWN;
 		} else {
-			System.out.println(getRandom(this.clarifications));
+			if (!this.isResponding) {
+				System.out.println(getRandom(this.clarifications));
+			}
 			// System.out.println("Type is invalid, doing nothing");
 			this.prevAct = Action.DO_NOTHING;
 			return Action.DO_NOTHING;
@@ -920,6 +953,21 @@ public class Robot {
 		public void setTargets(LinkedList<Position> targets) {
 			this.targets = targets;
 		}
+	}
+
+	public int getSentimentResult(List<CoreMap> sentences) {
+
+		for (CoreMap sentence : sentences) {
+			String sentiment = sentence.get(SentimentCoreAnnotations.SentimentClass.class);
+			if (sentiment.contains("positive") || sentiment.contains("Positive"))
+				return 1;
+			else if (sentiment.contains("negative") || sentiment.contains("Negative"))
+				return -1;
+			// System.out.println(sentiment + "\t" + sentence);
+		}
+
+		return 0;
+
 	}
 
 }
