@@ -395,7 +395,7 @@ public class Robot {
 				this.isExecuting = false;
 			}
 		}
-		if (name.contains("not") || name.contains("don't")) {
+		if (name.contains("not") || name.contains("don't")|| name.contains("no")) {
 			System.out.println(getRandom(this.reponses));
 			System.out.println("Sure, do nothing.");
 			this.prevAct = Action.DO_NOTHING;
@@ -959,11 +959,12 @@ public class Robot {
 
 		for (CoreMap sentence : sentences) {
 			String sentiment = sentence.get(SentimentCoreAnnotations.SentimentClass.class);
+			System.out.println(sentiment );
 			if (sentiment.contains("positive") || sentiment.contains("Positive"))
 				return 1;
 			else if (sentiment.contains("negative") || sentiment.contains("Negative"))
 				return -1;
-			// System.out.println(sentiment + "\t" + sentence);
+			
 		}
 
 		return 0;
