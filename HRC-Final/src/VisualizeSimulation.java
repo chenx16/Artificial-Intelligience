@@ -35,7 +35,7 @@ public class VisualizeSimulation extends JFrame {
 	 */
 	public VisualizeSimulation() {
 		// TODO: change the following to run the simulation on different maps.
-		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map104.txt";
+		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map107.txt";
 		LinkedList<String> map = new LinkedList<>();
 		try {
 			File inputFile = new File(filename);
@@ -84,7 +84,7 @@ class EnvironmentPanel extends JPanel {
 	public static final int TILESIZE = 25;
 	// TODO: Change the timeStepSpeed to speed-up or slow down the animation.
 	// 500 millisecond time steps
-	private int timeStepSpeed = 300;
+	private int timeStepSpeed = 50;
 
 	public EnvironmentPanel(Environment env, ArrayList<Robot> robots) {
 		robotColors.add(Properties.RED);
@@ -160,12 +160,22 @@ class EnvironmentPanel extends JPanel {
 				if (((int) (Math.random() * 10)) == 0) {
 					int row = (int) (Math.random() * env.getRows());
 					int col = (int) (Math.random() * env.getCols());
-					if (env.validPos(row, col))
+					if (env.validPos(row, col)) {
+						//working with live update to dirty tiles
+						env.dirtyTilesToAssign.add(new Position(row,col));
 						env.soilTile(row, col);
+					}
 				}
 				// TODO: the following screws up the id numbers.
-				if (((int) (Math.random() * 80)) == 0)
+				if (((int) (Math.random() * 1000)) == 0) {
+					//if we are deleting a robot, then we need to put the tile they were assigned to back in the pool
+					Robot rem = robots.get((int) (Math.random() * robots.size()));
+					//sometimes a robot would try to be removed twice, which would throw an error as you cant put a nulls place to clean
+					//back in the pool
+					if(rem!=null)
+						env.dirtyTilesToAssign.add(new Position(rem.placeToClean.getRow(), rem.placeToClean.getCol()));
 					robots.set((int) (Math.random() * robots.size()), null);
+				}
 				int l = 0;
 				for (Robot r : robots) {
 					if (r == null)
@@ -178,11 +188,11 @@ class EnvironmentPanel extends JPanel {
 				for (Robot robot : robots) {
 					if (robot != null) {
 						Action action;
-//						if (robot.isAutoCleaning)
-//							action = robot.valueInterationAction();
-//						else {
+						if (robot.isAutoCleaning)
+							action = robot.valueInterationAction();
+						else {
 						action = robot.getAction();
-//						}
+						}
 						int row = robot.getPosRow();
 						int col = robot.getPosCol();
 //						if (env.inRecording)

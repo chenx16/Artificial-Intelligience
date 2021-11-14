@@ -28,6 +28,7 @@ import edu.stanford.nlp.util.Pair;
  */
 
 public class Robot {
+
 	private Environment env;
 	private int posRow;
 	private int posCol;
@@ -146,9 +147,12 @@ public class Robot {
 	 */
 	public Action valueInterationAction() {
 
-		if (env.getTileStatus(placeToClean.row, placeToClean.col).equals(TileStatus.CLEAN))
-			// then recompute value matrix
-			recomputeValueMatrix = true;
+		// so if we are just over a clean tile, then just clean it
+		// this is too hard. it most likely wouldnt happen anyway
+//		if (env.getTileStatus(placeToClean.row, placeToClean.col).equals(TileStatus.CLEAN)) {
+//			// then recompute value matrix
+//			recomputeValueMatrix = true;
+//		}
 
 		if (recomputeValueMatrix) {
 			double[][] mat = env.computeValueMatrix(posRow, posCol, this);
@@ -158,15 +162,22 @@ public class Robot {
 		}
 		System.out.println(" ");
 
-		if (env.getTileStatus(this.posRow, this.posCol) == (TileStatus.DIRTY)) {
+//		if (env.getTileStatus(this.posRow, this.posCol) == (TileStatus.DIRTY)) {
+//
+//			if (!env.haveWeAssignedThis(this.posRow, this.posCol)) {
+//				if (this.posRow == this.placeToClean.getRow() && this.posCol == this.placeToClean.getCol()) {
+//					recomputeValueMatrix = true;
+//				} else
+//					recomputeValueMatrix = false;
+//			}
+//			return Action.CLEAN;
+//		}
 
-			if (!env.haveWeAssignedThis(this.posRow, this.posCol)) {
-				if (this.posRow == this.placeToClean.getRow() && this.posCol == this.placeToClean.getCol()) {
-					recomputeValueMatrix = true;
-				} else
-					recomputeValueMatrix = false;
-			}
+		// only do this if we are cleaning the one we assigned to ourself
+		if (this.getPosCol() == this.placeToClean.getCol() && this.getPosRow() == this.placeToClean.getRow()) {
+			recomputeValueMatrix = true;
 			return Action.CLEAN;
+
 		}
 
 		String ret = policyForSelf[this.posRow][this.posCol];
@@ -247,7 +258,7 @@ public class Robot {
 			ret = "up";
 		} else if (action == Action.MOVE_DOWN) {
 			ret = "down";
-		}
+		}else return Action.CLEAN;
 		Action returnMe = Action.DO_NOTHING;
 		Position goingInto = new Position(0, 0);
 
@@ -518,7 +529,7 @@ public class Robot {
 		if (myname == null) {
 			n = color;
 		} else
-			n = myname;
+			n = color + " " + myname;
 		System.out.print(n + "> ");
 		sc = new Scanner(System.in);
 		String name = sc.nextLine();
@@ -549,14 +560,14 @@ public class Robot {
 		}
 		if (isCleanCoor) {
 			System.out.println("Automated Clean Coordinates if dirty");
-			//bfsM(this.coordinatesToTargets(name));
+			// bfsM(this.coordinatesToTargets(name));
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}
 		if (isCleanRect) {
 			System.out.println("Automated Clean dirty tile in the rectangle");
 			LinkedList<Position> s = this.coordinatesToTargets(name);
-			//bfsM(this.rectsToTargets(name));
+			// bfsM(this.rectsToTargets(name));
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}
@@ -569,7 +580,7 @@ public class Robot {
 		}
 		if (name.contains("auto clean")) {
 			System.out.println("Automated Cleaning started");
-			//bfsM(this.getTargets());
+			// bfsM(this.getTargets());
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}
@@ -595,7 +606,13 @@ public class Robot {
 		if (this.isRecording) {
 			System.out.println("Recording path");
 			if (prevAct != null) {
+				System.out.println(this.prevAct == Action.CLEAN);
+
+//				if (this.prevAct == Action.CLEAN)
+//					this.currentP.add(Action.CLEAN);
+//				else
 				this.currentP.add(this.prevAct);
+				System.out.println(this.currentP.get(0) == Action.CLEAN);
 			}
 			if (name.contains("end record") || name.contains("finish record")) {
 				this.isRecording = false;

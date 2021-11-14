@@ -12,8 +12,12 @@ import java.util.*;
  * @author Adam Gaweda, Michael Wollowski
  */
 public class Environment {
+	//making a static class for dirty tiles to clean
+	public HashSet<Position> dirtyTilesToAssign = new HashSet<Position>();
+
 	private Tile[][] tiles;
 	private int rows, cols;
+	private int specialrows, specialcols;
 	private LinkedList<Position> targets = new LinkedList<>();
 	private ArrayList<Robot> robots;
 	private HashSet<Position> dirtyAssigned = new HashSet<>();
@@ -21,6 +25,7 @@ public class Environment {
 	public boolean inRecording;
 	public int recordingRobot;
 	public HashSet<Plan> plans;
+	private Robot specialrobot;
 
 	public Environment(LinkedList<String> map, ArrayList<Robot> robots) {
 		int i = 1;
@@ -42,6 +47,7 @@ public class Environment {
 					break;
 				}
 				case 'D':
+					this.dirtyTilesToAssign.add(new Position(row,col));
 					tiles[row][col] = new Tile(TileStatus.DIRTY);
 					break;
 				case 'C':
@@ -58,6 +64,16 @@ public class Environment {
 			}
 		}
 		this.robots = robots;
+	}
+
+	public void removeAssigned(int row, int col){
+		Position toRemove = new Position(-1,-1);
+		for(Position rem: dirtyTilesToAssign){
+			if(rem.getRow()==row && rem.getCol()==col)
+				toRemove = rem;
+
+		}
+		dirtyTilesToAssign.remove(toRemove);
 	}
 
 	public void setRecord(int id) {
@@ -229,6 +245,14 @@ public class Environment {
 		return policy;
 	}
 
+	public boolean canWeAssignThis(int row, int col){
+		for(Position check: this.dirtyTilesToAssign){
+			if(row == check.getRow() && col == check.getCol())
+				return true;
+		}
+		return false;
+	}
+
 	public double[][] computeValueMatrix(int currRow, int currCol, Robot setTarget) {
 
 		int numRows = getRows();
@@ -248,7 +272,7 @@ public class Environment {
 		for (int row = 0; row < numRows; row++) {
 			for (int col = 0; col < numCols; col++) {
 				// if its dirty
-				if (getTileStatus(row, col).equals(TileStatus.DIRTY) && !haveWeAssignedThis(row, col))
+				if (getTileStatus(row, col).equals(TileStatus.DIRTY) && canWeAssignThis(row,col))
 					// then compute manhattan distance
 					if (Math.abs(currRow - row) + Math.abs(currCol - col) < currMinDist) {
 						// if its smaller, then store it
@@ -262,7 +286,8 @@ public class Environment {
 		if (!foundDirtyTile)
 			return new double[numRows][numCols];
 
-		dirtyAssigned.add(new Position(closestDirtyTile.getRow(), closestDirtyTile.getCol()));
+		//dirtyAssigned.add(new Position(closestDirtyTile.getRow(), closestDirtyTile.getCol()));
+		removeAssigned(closestDirtyTile.getRow(), closestDirtyTile.getCol());
 		setTarget.placeToClean = new Position(closestDirtyTile.getRow(), closestDirtyTile.getCol());
 
 		// alright, now we have the closest dirty tile
