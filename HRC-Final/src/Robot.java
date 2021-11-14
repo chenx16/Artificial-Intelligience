@@ -58,7 +58,7 @@ public class Robot {
 	private boolean isRecording;
 	private boolean isExecuting;
 	private boolean isNamingPlan;
-	private boolean isAutoCleaning;
+	public boolean isAutoCleaning;
 	private Queue<Action> path;
 	private HashMap<String, LinkedList<Action>> recordedP;
 	private LinkedList<Action> currentP;
@@ -507,7 +507,6 @@ public class Robot {
 		}
 		if (isAutoCleaning) {
 			if (!this.path.isEmpty()) {
-
 				return this.path.poll();
 			} else {
 				this.isCleanCoor = false;
@@ -550,14 +549,14 @@ public class Robot {
 		}
 		if (isCleanCoor) {
 			System.out.println("Automated Clean Coordinates if dirty");
-			bfsM(this.coordinatesToTargets(name));
+			//bfsM(this.coordinatesToTargets(name));
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}
 		if (isCleanRect) {
 			System.out.println("Automated Clean dirty tile in the rectangle");
 			LinkedList<Position> s = this.coordinatesToTargets(name);
-			bfsM(this.rectsToTargets(name));
+			//bfsM(this.rectsToTargets(name));
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}
@@ -570,7 +569,7 @@ public class Robot {
 		}
 		if (name.contains("auto clean")) {
 			System.out.println("Automated Cleaning started");
-			bfsM(this.getTargets());
+			//bfsM(this.getTargets());
 			this.isAutoCleaning = true;
 			return Action.DO_NOTHING;
 		}

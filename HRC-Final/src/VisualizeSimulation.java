@@ -35,7 +35,7 @@ public class VisualizeSimulation extends JFrame {
 	 */
 	public VisualizeSimulation() {
 		// TODO: change the following to run the simulation on different maps.
-		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map102.txt";
+		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map104.txt";
 		LinkedList<String> map = new LinkedList<>();
 		try {
 			File inputFile = new File(filename);
@@ -177,7 +177,12 @@ class EnvironmentPanel extends JPanel {
 				}
 				for (Robot robot : robots) {
 					if (robot != null) {
-						Action action = robot.getAction();
+						Action action;
+//						if (robot.isAutoCleaning)
+//							action = robot.valueInterationAction();
+//						else {
+						action = robot.getAction();
+//						}
 						int row = robot.getPosRow();
 						int col = robot.getPosCol();
 //						if (env.inRecording)
