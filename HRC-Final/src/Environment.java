@@ -1,4 +1,11 @@
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 /**
@@ -14,13 +21,12 @@ import java.util.*;
 public class Environment {
 	// making a static class for dirty tiles to clean
 	public HashSet<Position> dirtyTilesToAssign = new HashSet<Position>();
-
+	private BufferedReader reader;
 	private Tile[][] tiles;
 	private int rows, cols;
 	private int specialrow, specialcol;
 	private LinkedList<Position> targets = new LinkedList<>();
 	ArrayList<Robot> robots;
-	public RobotSpecial robotspecial;
 	private HashSet<Position> dirtyAssigned = new HashSet<>();
 	public HashMap<Robot, Position> currentRobotPositions = new HashMap<>();
 	public boolean inRecording;
@@ -28,7 +34,8 @@ public class Environment {
 	public HashSet<Plan> plans;
 	private Robot specialrobot;
 
-	public Environment(LinkedList<String> map, ArrayList<Robot> robots) {
+	public Environment(LinkedList<String> map, ArrayList<Robot> robots) throws IOException {
+
 		int i = 1;
 		this.plans = new HashSet<Plan>();
 		this.cols = map.get(0).length();
@@ -65,18 +72,54 @@ public class Environment {
 			}
 		}
 		this.robots = robots;
-		createSpecialRobot() ;
+		try {
+			FileReader fw = new FileReader("out.txt");
+			reader = new BufferedReader(fw);
+			readandstorePlan();
+			reader.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("not read");
+		}
+
 	}
 
-	public void createSpecialRobot() {
-		for (int row = 0; row < this.rows; row++) {
-			for (int col = 0; col < this.cols; col++) {
-				if (tiles[row][col].getStatus() == TileStatus.CLEAN) {
-					this.robotspecial = new RobotSpecial(this, row, col, this.robots.size() + 1);
-
+	public void readandstorePlan() {
+		String read = null;
+		String name = null;
+		int i = 0;
+		try {
+			while ((read = reader.readLine()) != null) {
+				if (i % 2 == 0) {
+					name = read;
+					System.out.println(name);
+					i++;
+				} else {
+					String[] splited = read.split(" ");
+					LinkedList<Action> actions = new LinkedList<Action>();
+					for (String part : splited) {
+						System.out.print(part + "");
+						if (part.equals("right"))
+							actions.add(Action.MOVE_RIGHT);
+						if (part.equals("left"))
+							actions.add(Action.MOVE_LEFT);
+						if (part.equals("up"))
+							actions.add(Action.MOVE_UP);
+						if (part.equals("down"))
+							actions.add(Action.MOVE_DOWN);
+						if (part.equals("clean"))
+							actions.add(Action.CLEAN);
+					}
+					System.out.println();
+					this.plans.add(new Plan(name, actions));
+					i++;
 				}
 
 			}
+		} catch (
+
+		IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 

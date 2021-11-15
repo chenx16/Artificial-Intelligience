@@ -1,0 +1,10 @@
+a
+right right clean 
+b
+left left down 
+c
+right right clean left left down 
+d
+right right clean left left down right right clean left left down 
+h
+right right clean right right clean left left down 

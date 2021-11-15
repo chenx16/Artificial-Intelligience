@@ -9,6 +9,7 @@ import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -26,6 +27,7 @@ import javax.swing.Timer;
  * @author Adam Gaweda, Michael Wollowski
  */
 public class VisualizeSimulation extends JFrame {
+	
 	private static final long serialVersionUID = 1L;
 	private EnvironmentPanel envPanel;
 	public Environment env;
@@ -36,9 +38,9 @@ public class VisualizeSimulation extends JFrame {
 	 * from a file, or creating multiple agents that can communicate/interact with
 	 * each other.
 	 */
-	public VisualizeSimulation() {
+	public VisualizeSimulation() throws IOException {
 		// TODO: change the following to run the simulation on different maps.
-		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map107.txt";
+		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map104.txt";
 		LinkedList<String> map = new LinkedList<>();
 		try {
 			File inputFile = new File(filename);
@@ -64,7 +66,7 @@ public class VisualizeSimulation extends JFrame {
 		add(envPanel);
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		JFrame frame = new VisualizeSimulation();
 		frame.setTitle("CSSE 413: HRC Project");
 //		frame.addKeyListener(new KeyHandler(((VisualizeSimulation) frame).env.robotspecial, frame));
@@ -90,7 +92,7 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 	public static final int TILESIZE = 25;
 	// TODO: Change the timeStepSpeed to speed-up or slow down the animation.
 	// 500 millisecond time steps
-	private int timeStepSpeed = 50;
+	private int timeStepSpeed = 150;
 
 	public EnvironmentPanel(Environment env, ArrayList<Robot> robots) {
 		this.requestFocusInWindow(true);
@@ -126,7 +128,12 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 		this.timer = new Timer(timeStepSpeed, new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				repaint();
-				updateEnvironment();
+				try {
+					updateEnvironment();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				repaint();
 //				if (timesteps == timestepsStop) {
 //					timer.stop();
@@ -168,9 +175,9 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 			}
 
 			// Gets the new state of the world after robot actions
-			public void updateEnvironment() {
+			public void updateEnvironment() throws IOException {
 				timesteps++;
-				if (((int) (Math.random() * 10)) == 0) {
+				if (((int) (Math.random() * 5)) == 0) {
 					int row = (int) (Math.random() * env.getRows());
 					int col = (int) (Math.random() * env.getCols());
 					if (env.validPos(row, col)) {
@@ -180,16 +187,18 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 					}
 				}
 				// TODO: the following screws up the id numbers.
-				if (((int) (Math.random() * 1000)) == 0) {
-					// if we are deleting a robot, then we need to put the tile they were assigned
-					// to back in the pool
-					Robot rem = robots.get((int) (Math.random() * robots.size()));
-					// sometimes a robot would try to be removed twice, which would throw an error
-					// as you cant put a nulls place to clean
-					// back in the pool
-					if (rem != null)
-						env.dirtyTilesToAssign.add(new Position(rem.placeToClean.getRow(), rem.placeToClean.getCol()));
-					robots.set((int) (Math.random() * robots.size()), null);
+				if (((int) (Math.random() * 50)) == 0) {
+					if((int) (Math.random() * robots.size())!=0) {
+						// if we are deleting a robot, then we need to put the tile they were assigned
+						// to back in the pool
+						Robot rem = robots.get((int) (Math.random() * robots.size()));
+						// sometimes a robot would try to be removed twice, which would throw an error
+						// as you cant put a nulls place to clean
+						// back in the pool
+						if (rem != null)
+							env.dirtyTilesToAssign.add(new Position(rem.placeToClean.getRow(), rem.placeToClean.getCol()));
+						robots.set((int) (Math.random() * robots.size()), null);
+					}
 				}
 				int l = 0;
 				for (Robot r : robots) {

@@ -1,4 +1,8 @@
 import java.awt.Color;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -82,7 +86,7 @@ public class Robot {
 		this.posRow = posRow;
 		this.posCol = posCol;
 		this.toCleanOrNotToClean = false;
-		this.color = "black";
+		this.color = "Initialize name:";
 		this.myname = null;
 		this.path = new LinkedList<Action>();
 		this.isResponding = false;
@@ -245,216 +249,6 @@ public class Robot {
 		}
 		return returnMe;
 
-	}
-
-	public Action getAction(String command) {
-		if (this.env.inRecording && this.id != this.env.recordingRobot)
-			return Action.DO_NOTHING;
-
-		Annotation annotation;
-		this.isResponding = false;
-
-		if (this.myname == null && !this.ifNaming) {
-			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
-		}
-		if (this.isExecuting) {
-			if (this.pathIterator.hasNext()) {
-				return this.pathIterator.next();
-			} else {
-				this.isExecuting = false;
-			}
-		}
-		if (isNamingPlan) {
-			System.out.println("Please Enter Your Plan Name:");
-
-		}
-		if (isAutoCleaning) {
-			if (!this.path.isEmpty()) {
-				return this.path.poll();
-			} else {
-				this.isCleanCoor = false;
-				this.isCleanRect = false;
-				this.isAutoCleaning = false;
-			}
-		}
-		String n;
-		if (myname == null) {
-			n = color;
-		} else
-			n = color + " " + myname;
-		System.out.print(n + "> ");
-//		sc = new Scanner(System.in);
-//		String name = sc.nextLine();
-		String name = command.toLowerCase();
-		annotation = new Annotation(name);
-		pipeline.annotate(annotation);
-		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-		int sentiment = this.getSentimentResult(sentences);
-		// System.out.println(sentiment);
-		if (sentiment == 1) {
-			System.out.println(getRandom(this.positiveFeedback));
-			this.isResponding = true;
-		} else if (sentiment == -1) {
-			System.out.println(getRandom(this.negativeFeedback));
-			this.isResponding = true;
-		}
-
-		if (this.myname == null && !this.ifNaming) {
-			this.ifNaming = true;
-			this.myname = name;
-			System.out.println(getRandom(this.reponses));
-			System.out.println("Got the name!");
-			updateactPrepend();
-			updateactClarification();
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
-		if (isCleanCoor) {
-			System.out.println("Automated Clean Coordinates if dirty");
-			// bfsM(this.coordinatesToTargets(name));
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if (isCleanRect) {
-			System.out.println("Automated Clean dirty tile in the rectangle");
-			LinkedList<Position> s = this.coordinatesToTargets(name);
-			// bfsM(this.rectsToTargets(name));
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if ((name.contains("begin record") || name.contains("start record")) && !this.isRecording) {
-			this.isRecording = true;
-			this.env.setRecord(this.id);
-			this.currentP = new LinkedList<Action>();
-			System.out.println("Recording started");
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("auto clean")) {
-			System.out.println("Automated Cleaning started");
-			// bfsM(this.getTargets());
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("clean coordinates")) {
-			System.out.println("Please enter coordinates in the form: (a,b),(c,d)");
-			this.isCleanCoor = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("clean rectangle")) {
-			System.out.println(
-					"Please enter coordinates in the form: (upperleft x,upperleft y),(lowerright x,lowerright y)");
-			this.isCleanRect = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("combine plan") && this.isCombining == false) {
-			System.out.println("Combining two plans for you.");
-			this.currentcombiningP = new LinkedList<Action>();
-			extractCombine(name);
-			this.isNamingPlan = true;
-			this.isCombining = true;
-			return Action.DO_NOTHING;
-		}
-		if (this.isRecording) {
-			System.out.println("Recording path");
-			if (prevAct != null) {
-				System.out.println(this.prevAct == Action.CLEAN);
-
-//				if (this.prevAct == Action.CLEAN)
-//					this.currentP.add(Action.CLEAN);
-//				else
-				this.currentP.add(this.prevAct);
-				System.out.println(this.currentP.get(0) == Action.CLEAN);
-			}
-			if (name.contains("end record") || name.contains("finish record")) {
-				this.isRecording = false;
-				this.isNamingPlan = true;
-				this.currentP.remove(0);
-				System.out.println("Recording finished");
-				return Action.DO_NOTHING;
-			}
-
-		}
-		if (this.isNamingPlan) {
-			if (this.isCombining) {
-				Plan p = new Plan(name, currentcombiningP);
-				this.env.plans.add(p);
-				// this.recordedP.put(name, currentcombiningP);
-				System.out.println("Named the combined plan " + name);
-				this.isCombining = false;
-				this.isNamingPlan = false;
-			} else {
-				Plan p = new Plan(name, currentP);
-				this.env.plans.add(p);
-				// this.recordedP.put(name, currentP);
-				System.out.println("Named the plan " + name);
-				this.isNamingPlan = false;
-				this.env.setnonRecord();
-			}
-			return Action.DO_NOTHING;
-		}
-
-		this.checkForExecutePlan(name);
-
-		// execute paths
-		if (this.isExecuting) {
-			if (this.pathIterator.hasNext()) {
-				return this.pathIterator.next();
-			} else {
-				this.isExecuting = false;
-			}
-		}
-		if (name.contains("not") || name.contains("don't") || name.contains("no")) {
-			System.out.println(getRandom(this.reponses));
-			System.out.println("Sure, do nothing.");
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
-
-		if (sentences != null && !sentences.isEmpty()) {
-			CoreMap sentence = sentences.get(0);
-			SemanticGraph graph = sentence
-					.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
-//			graph.prettyPrint();
-			IndexedWord root = graph.getFirstRoot();
-			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
-			String type = root.tag();
-			String rootString = root.toString();
-			// System.out.println("Root: " + rootString);
-			// System.out.println("Pairs: " + pairs.toString());
-			switch (type) {
-			case "VB":
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "VBP":
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "JJR": // root is more, more up
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "NN": // root is more, more up
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			default:
-				if (this.isRecording)
-					return processSingleWord(name, root, graph);
-				else
-					return HandlingRandomandCollision(processSingleWord(name, root, graph));
-			}
-
-		}
-		System.out.println("Empty sentence.");
-		if (!this.isResponding) {
-			System.out.println(getRandom(this.clarifications));
-		}
-		return HandlingRandomandCollision(Action.DO_NOTHING);
 	}
 
 	// handling the random and collision of 11 and 13 in last milestone
@@ -649,17 +443,11 @@ public class Robot {
 			plan = input.substring(23, input.length());
 
 			System.out.println("Executing symmetric plan " + plan);
-//			if (this.recordedP.isEmpty() || this.recordedP.get(plan) == null) {
-//				System.out.println("Plan is not recorded");
-//				return;
-//			}
 			if (this.env.plans.isEmpty() || this.env.getPlan(plan) == null) {
 				System.out.println("Plan is not recorded");
 				return;
 			}
-//			this.currentP = this.symmatric(this.recordedP.get(plan));
 			this.currentP = this.symmatric(this.env.getPlan(plan));
-//			System.out.println("heloooooooooooooo" + this.currentP.size());
 			if (this.currentP == null) {
 				System.out.println("No path found");
 			}
@@ -680,33 +468,21 @@ public class Robot {
 				break;
 			}
 		}
-//		System.out.println("plan1" + plan1);
-//		System.out.println("plan2" + plan2);
-
-//		LinkedList<Action> arr1 = this.recordedP.get(plan1);
-
 		LinkedList<Action> arr1 = this.env.getPlan(plan1);
-//		System.out.println("111size" + arr1.size());
-//		System.out.println("plan1" + (arr1.getFirst() == Action.MOVE_RIGHT));
-
-//		LinkedList<Action> arr2 = this.recordedP.get(plan2);
-
 		LinkedList<Action> arr2 = this.env.getPlan(plan2);
-//		System.out.println("222size" + arr2.size());
-//		System.out.println("plan2" + (arr2.get(0) == Action.MOVE_DOWN));
-//		arr1.addAll(arr2);
-		arr1.add(arr2.getFirst());
-//		System.out.println("size" + arr1.size());
-		this.currentcombiningP = arr1;
+		arr1.addAll(arr2);
+		this.currentcombiningP = new LinkedList<>(arr1);
 	}
 
 	/**
 	 * Returns the next action to be taken by the robot. A support function that
 	 * processes the path LinkedList that has been populates by the search
 	 * functions.
+	 * 
+	 * @throws IOException
 	 */
 
-	public Action getAction() {
+	public Action getAction() throws IOException {
 		if (this.env.inRecording && this.id != this.env.recordingRobot)
 			return Action.DO_NOTHING;
 
@@ -718,6 +494,7 @@ public class Robot {
 		}
 		if (this.isExecuting) {
 			if (this.pathIterator.hasNext()) {
+				System.out.println();
 				return this.pathIterator.next();
 			} else {
 				this.isExecuting = false;
@@ -838,15 +615,53 @@ public class Robot {
 			if (this.isCombining) {
 				Plan p = new Plan(name, currentcombiningP);
 				this.env.plans.add(p);
+				FileWriter fw = new FileWriter("out.txt", true);
+				BufferedWriter writer = new BufferedWriter(fw);
+				writer.write(name);
+				writer.newLine();
+
+				for (Action a : currentcombiningP) {
+					if (a == Action.CLEAN)
+						writer.write("clean ");
+					else if (a == Action.MOVE_LEFT)
+						writer.write("left ");
+					else if (a == Action.MOVE_RIGHT)
+						writer.write("right ");
+					else if (a == Action.MOVE_UP)
+						writer.write("up ");
+					else if (a == Action.MOVE_DOWN)
+						writer.write("down ");
+				}
+				writer.newLine();
 				// this.recordedP.put(name, currentcombiningP);
 				System.out.println("Named the combined plan " + name);
+				writer.close();
 				this.isCombining = false;
 				this.isNamingPlan = false;
 			} else {
 				Plan p = new Plan(name, currentP);
 				this.env.plans.add(p);
+				FileWriter fw = new FileWriter("out.txt", true);
+				BufferedWriter writer = new BufferedWriter(fw);
+				writer.write(name);
+				writer.newLine();
+
+				for (Action a : currentP) {
+					if (a == Action.CLEAN)
+						writer.write("clean ");
+					else if (a == Action.MOVE_LEFT)
+						writer.write("left ");
+					else if (a == Action.MOVE_RIGHT)
+						writer.write("right ");
+					else if (a == Action.MOVE_UP)
+						writer.write("up ");
+					else if (a == Action.MOVE_DOWN)
+						writer.write("down ");
+				}
+				writer.newLine();
 				// this.recordedP.put(name, currentP);
 				System.out.println("Named the plan " + name);
+				writer.close();
 				this.isNamingPlan = false;
 				this.env.setnonRecord();
 			}
@@ -883,15 +698,31 @@ public class Robot {
 			// System.out.println("Pairs: " + pairs.toString());
 			switch (type) {
 			case "VB":
-				return HandlingRandomandCollision(processVB(graph, root));
+				if (isRecording) {
+					return processVB(graph, root);
+				} else
+					return HandlingRandomandCollision(processVB(graph, root));
 			case "VBP":
-				return HandlingRandomandCollision(processVB(graph, root));
+
+				if (isRecording) {
+					return processVB(graph, root);
+				} else
+					return HandlingRandomandCollision(processVB(graph, root));
 			case "JJR": // root is more, more up
-				return HandlingRandomandCollision(processVB(graph, root));
+				if (isRecording) {
+					return processVB(graph, root);
+				} else
+					return HandlingRandomandCollision(processVB(graph, root));
 			case "NN": // root is more, more up
-				return HandlingRandomandCollision(processVB(graph, root));
+				if (isRecording) {
+					return processVB(graph, root);
+				} else
+					return HandlingRandomandCollision(processVB(graph, root));
 			default:
-				return HandlingRandomandCollision(processSingleWord(name, root, graph));
+				if (isRecording) {
+					return processSingleWord(name, root, graph);
+				} else
+					return HandlingRandomandCollision(processSingleWord(name, root, graph));
 			}
 
 		}
@@ -899,7 +730,7 @@ public class Robot {
 		if (!this.isResponding) {
 			System.out.println(getRandom(this.clarifications));
 		}
-		return HandlingRandomandCollision(Action.DO_NOTHING);
+		return Action.DO_NOTHING;
 	}
 
 	private Action processSingleWord(String name, IndexedWord root, SemanticGraph graph) {
@@ -1314,17 +1145,12 @@ public class Robot {
 	}
 
 	public void bfsM(LinkedList<Position> targets) {
-		// TODO: Implement this method
-		// LinkedList<Action> actions = new LinkedList<>();
-		// contains, if it contains, remove
 		Queue<State> open = new LinkedList<>();
 		LinkedList<State> closed = new LinkedList<>();
 		open.add(new State(posRow, posCol, new LinkedList<Action>(), targets));
 
 		while (!open.isEmpty()) {
 			State cell = open.poll();
-			// System.out.println(cell.row + "," + cell.col + "; " + " ");
-			// TileStatus status = this.env.getTileStatus(cell.row, cell.col);
 			closed.add(cell);
 
 			if (containsPosition(cell.targets, cell.row, cell.col)) {
