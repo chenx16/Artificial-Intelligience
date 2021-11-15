@@ -4,6 +4,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -26,6 +28,7 @@ import javax.swing.Timer;
 public class VisualizeSimulation extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private EnvironmentPanel envPanel;
+	public Environment env;
 
 	/*
 	 * Builds the environment; while not necessary for this problem set, this could
@@ -48,35 +51,38 @@ public class VisualizeSimulation extends JFrame {
 			}
 			fileReader.close();
 		} catch (Exception exception) {
-			System.out.println(exception);
+//			System.out.println(exception);
 			System.exit(0);
 			;
 		}
 
 		ArrayList<Robot> robots = new ArrayList<Robot>();
-		Environment env = new Environment(map, robots);
-
+		this.env = new Environment(map, robots);
 		envPanel = new EnvironmentPanel(env, robots);
+		// envPanel.addKeyListener(envPanel);
+//		envPanel.addKeyListener(new KeyHandler(env.robots.get(0), envPanel));
 		add(envPanel);
 	}
 
 	public static void main(String[] args) {
 		JFrame frame = new VisualizeSimulation();
-
 		frame.setTitle("CSSE 413: HRC Project");
+//		frame.addKeyListener(new KeyHandler(((VisualizeSimulation) frame).env.robotspecial, frame));
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.pack();
+		frame.setResizable(false);
 		frame.setVisible(true);
+
 	}
 }
 
 @SuppressWarnings("serial")
-class EnvironmentPanel extends JPanel {
+class EnvironmentPanel extends JPanel implements KeyListener {
 
 	private ArrayList<Color> robotColors = new ArrayList<>();
 	private ArrayList<String> rtString = new ArrayList<>();
-	private Timer timer;
-	private Environment env;
+	public Timer timer;
+	Environment env;
 	private ArrayList<Robot> robots;
 	private LinkedList<Position> targets;
 	private int timesteps, timestepsStop;
@@ -87,6 +93,12 @@ class EnvironmentPanel extends JPanel {
 	private int timeStepSpeed = 50;
 
 	public EnvironmentPanel(Environment env, ArrayList<Robot> robots) {
+		this.requestFocusInWindow(true);
+		this.setFocusable(true);
+		this.requestFocus();
+
+		this.addKeyListener(this);
+
 		robotColors.add(Properties.RED);
 		robotColors.add(Properties.GREEN);
 		robotColors.add(Properties.BLUE);
@@ -113,6 +125,7 @@ class EnvironmentPanel extends JPanel {
 
 		this.timer = new Timer(timeStepSpeed, new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				repaint();
 				updateEnvironment();
 				repaint();
 //				if (timesteps == timestepsStop) {
@@ -161,18 +174,20 @@ class EnvironmentPanel extends JPanel {
 					int row = (int) (Math.random() * env.getRows());
 					int col = (int) (Math.random() * env.getCols());
 					if (env.validPos(row, col)) {
-						//working with live update to dirty tiles
-						env.dirtyTilesToAssign.add(new Position(row,col));
+						// working with live update to dirty tiles
+						env.dirtyTilesToAssign.add(new Position(row, col));
 						env.soilTile(row, col);
 					}
 				}
 				// TODO: the following screws up the id numbers.
 				if (((int) (Math.random() * 1000)) == 0) {
-					//if we are deleting a robot, then we need to put the tile they were assigned to back in the pool
+					// if we are deleting a robot, then we need to put the tile they were assigned
+					// to back in the pool
 					Robot rem = robots.get((int) (Math.random() * robots.size()));
-					//sometimes a robot would try to be removed twice, which would throw an error as you cant put a nulls place to clean
-					//back in the pool
-					if(rem!=null)
+					// sometimes a robot would try to be removed twice, which would throw an error
+					// as you cant put a nulls place to clean
+					// back in the pool
+					if (rem != null)
 						env.dirtyTilesToAssign.add(new Position(rem.placeToClean.getRow(), rem.placeToClean.getCol()));
 					robots.set((int) (Math.random() * robots.size()), null);
 				}
@@ -186,12 +201,12 @@ class EnvironmentPanel extends JPanel {
 					System.exit(0);
 				}
 				for (Robot robot : robots) {
-					if (robot != null) {
+					if (robot != null && robot.id != 1) {
 						Action action;
 						if (robot.isAutoCleaning)
 							action = robot.valueInterationAction();
 						else {
-						action = robot.getAction();
+							action = robot.getAction();
 						}
 						int row = robot.getPosRow();
 						int col = robot.getPosCol();
@@ -267,5 +282,63 @@ class EnvironmentPanel extends JPanel {
 						robots.get(i).getPosRow() * TILESIZE + TILESIZE / 4, TILESIZE / 2, TILESIZE / 2);
 			}
 		}
+//		g.setColor(Color.BLACK);
+//		g.fillOval(env.robotspecial.getPosCol() * TILESIZE + TILESIZE / 4,
+//				env.robotspecial.getPosRow() * TILESIZE + TILESIZE / 4, TILESIZE / 2, TILESIZE / 2);
 	}
+
+	@Override
+	public void keyTyped(KeyEvent e) {
+		// TODO Auto-generated method stub
+		int code = e.getKeyCode();
+		System.out.println(code);
+
+	}
+
+	public boolean check(int row, int col) {
+		for (Robot r : this.robots) {
+			if (r != null && r.getPosRow() == row && r.getPosCol() == col)
+				return false;
+		}
+		return true;
+	}
+
+	@Override
+	public void keyPressed(KeyEvent e) {
+		// TODO Auto-generated method stub
+		int code = e.getKeyCode();
+//		System.out.println(code);
+		int row = this.robots.get(0).getPosRow();
+		int col = this.robots.get(0).getPosCol();
+		switch (code) {
+		case KeyEvent.VK_SPACE:
+			env.cleanTile(row, col);
+			break;
+		case KeyEvent.VK_DOWN:
+			if (env.validPos(row + 1, col) && check(row + 1, col))
+				this.robots.get(0).incPosRow();
+			break;
+		case KeyEvent.VK_LEFT:
+			if (env.validPos(row, col - 1) && check(row, col - 1))
+				this.robots.get(0).decPosCol();
+			break;
+		case KeyEvent.VK_RIGHT:
+			if (env.validPos(row, col + 1) && check(row, col + 1))
+				this.robots.get(0).incPosCol();
+			break;
+		case KeyEvent.VK_UP:
+			if (env.validPos(row - 1, col) && check(row - 1, col))
+				this.robots.get(0).decPosRow();
+			break;
+		}
+	}
+
+	@Override
+	public void keyReleased(KeyEvent e) {
+		// TODO Auto-generated method stub
+//		int code = e.getKeyCode();
+//		System.out.println(code);
+
+	}
+
 }

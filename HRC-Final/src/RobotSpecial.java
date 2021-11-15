@@ -27,7 +27,7 @@ import edu.stanford.nlp.util.Pair;
  * @author Adam Gaweda, Michael Wollowski
  */
 
-public class Robot {
+public class RobotSpecial {
 
 	private Environment env;
 	private int posRow;
@@ -69,14 +69,14 @@ public class Robot {
 	private boolean isCleanRect;
 	private boolean isResponding;
 	private boolean isCombining;
-	int id;
+	private int id;
 	public String color;
 
 	/**
 	 * Initializes a Robot on a specific tile in the environment.
 	 */
 
-	public Robot(Environment env, int posRow, int posCol, int id) {
+	public RobotSpecial(Environment env, int posRow, int posCol, int id) {
 		this.id = id;
 		this.env = env;
 		this.posRow = posRow;
@@ -145,317 +145,107 @@ public class Robot {
 	 * processes the path LinkedList that has been populates by the search
 	 * functions.
 	 */
-	public Action valueInterationAction() {
-
-		// so if we are just over a clean tile, then just clean it
-		// this is too hard. it most likely wouldnt happen anyway
-//		if (env.getTileStatus(placeToClean.row, placeToClean.col).equals(TileStatus.CLEAN)) {
-//			// then recompute value matrix
-//			recomputeValueMatrix = true;
-//		}
-
-		if (recomputeValueMatrix) {
-			double[][] mat = env.computeValueMatrix(posRow, posCol, this);
-			policyForSelf = env.retPolicy(mat);
-			recomputeValueMatrix = false;
-
-		}
-//		System.out.println(" ");
-
-//		if (env.getTileStatus(this.posRow, this.posCol) == (TileStatus.DIRTY)) {
+//	public Action valueInterationAction() {
 //
-//			if (!env.haveWeAssignedThis(this.posRow, this.posCol)) {
-//				if (this.posRow == this.placeToClean.getRow() && this.posCol == this.placeToClean.getCol()) {
-//					recomputeValueMatrix = true;
-//				} else
-//					recomputeValueMatrix = false;
-//			}
-//			return Action.CLEAN;
+//		// so if we are just over a clean tile, then just clean it
+//		// this is too hard. it most likely wouldnt happen anyway
+////		if (env.getTileStatus(placeToClean.row, placeToClean.col).equals(TileStatus.CLEAN)) {
+////			// then recompute value matrix
+////			recomputeValueMatrix = true;
+////		}
+//
+//		if (recomputeValueMatrix) {
+//			double[][] mat = env.computeValueMatrix(posRow, posCol, this);
+//			policyForSelf = env.retPolicy(mat);
+//			recomputeValueMatrix = false;
+//
 //		}
-
-		// only do this if we are cleaning the one we assigned to ourself
-		if (this.getPosCol() == this.placeToClean.getCol() && this.getPosRow() == this.placeToClean.getRow()) {
-			recomputeValueMatrix = true;
-			return Action.CLEAN;
-
-		}
-
-		String ret = policyForSelf[this.posRow][this.posCol];
-		Action returnMe = Action.DO_NOTHING;
-
-		Position goingInto = new Position(0, 0);
-
-		switch (ret) {
-		case "up":
-			returnMe = Action.MOVE_UP;
-			goingInto = new Position(posRow - 1, posCol);
-			break;
-		case "down":
-			returnMe = Action.MOVE_DOWN;
-			goingInto = new Position(posRow + 1, posCol);
-			break;
-		case "right":
-			returnMe = Action.MOVE_RIGHT;
-			goingInto = new Position(posRow, posCol + 1);
-			break;
-		case "left":
-			returnMe = Action.MOVE_LEFT;
-			goingInto = new Position(posRow, posCol - 1);
-			break;
-		}
-		Random randy = new Random();
-		int choice = randy.nextInt(10);
-
-		if (choice == 0) {
-			switch (ret) {
-			case "up":
-			case "down":
-				goingInto = new Position(posRow, posCol - 1);
-				returnMe = Action.MOVE_LEFT;
-				break;
-			case "left":
-			case "right":
-				goingInto = new Position(posRow - 1, posCol);
-				returnMe = Action.MOVE_UP;
-				break;
-			}
-		}
-		if (choice == 1) {
-			switch (ret) {
-			case "up":
-			case "down":
-				goingInto = new Position(posRow, posCol + 1);
-				returnMe = Action.MOVE_RIGHT;
-				break;
-			case "left":
-			case "right":
-				goingInto = new Position(posRow + 1, posCol);
-				returnMe = Action.MOVE_DOWN;
-				break;
-			}
-		}
-
-		for (Robot check : env.currentRobotPositions.keySet()) {
-
-			if (!check.equals(this)) {
-				if (check.posRow == goingInto.getRow() && check.posCol == goingInto.getCol()) {
-					return Action.DO_NOTHING;
-				}
-			}
-		}
-		return returnMe;
-
-	}
-
-	public Action getAction(String command) {
-		if (this.env.inRecording && this.id != this.env.recordingRobot)
-			return Action.DO_NOTHING;
-
-		Annotation annotation;
-		this.isResponding = false;
-
-		if (this.myname == null && !this.ifNaming) {
-			System.out.println("Hello! I am your private cleaner, would you please give me a name?");
-		}
-		if (this.isExecuting) {
-			if (this.pathIterator.hasNext()) {
-				return this.pathIterator.next();
-			} else {
-				this.isExecuting = false;
-			}
-		}
-		if (isNamingPlan) {
-			System.out.println("Please Enter Your Plan Name:");
-
-		}
-		if (isAutoCleaning) {
-			if (!this.path.isEmpty()) {
-				return this.path.poll();
-			} else {
-				this.isCleanCoor = false;
-				this.isCleanRect = false;
-				this.isAutoCleaning = false;
-			}
-		}
-		String n;
-		if (myname == null) {
-			n = color;
-		} else
-			n = color + " " + myname;
-		System.out.print(n + "> ");
-//		sc = new Scanner(System.in);
-//		String name = sc.nextLine();
-		String name = command.toLowerCase();
-		annotation = new Annotation(name);
-		pipeline.annotate(annotation);
-		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
-		int sentiment = this.getSentimentResult(sentences);
-		// System.out.println(sentiment);
-		if (sentiment == 1) {
-			System.out.println(getRandom(this.positiveFeedback));
-			this.isResponding = true;
-		} else if (sentiment == -1) {
-			System.out.println(getRandom(this.negativeFeedback));
-			this.isResponding = true;
-		}
-
-		if (this.myname == null && !this.ifNaming) {
-			this.ifNaming = true;
-			this.myname = name;
-			System.out.println(getRandom(this.reponses));
-			System.out.println("Got the name!");
-			updateactPrepend();
-			updateactClarification();
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
-		if (isCleanCoor) {
-			System.out.println("Automated Clean Coordinates if dirty");
-			// bfsM(this.coordinatesToTargets(name));
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if (isCleanRect) {
-			System.out.println("Automated Clean dirty tile in the rectangle");
-			LinkedList<Position> s = this.coordinatesToTargets(name);
-			// bfsM(this.rectsToTargets(name));
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if ((name.contains("begin record") || name.contains("start record")) && !this.isRecording) {
-			this.isRecording = true;
-			this.env.setRecord(this.id);
-			this.currentP = new LinkedList<Action>();
-			System.out.println("Recording started");
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("auto clean")) {
-			System.out.println("Automated Cleaning started");
-			// bfsM(this.getTargets());
-			this.isAutoCleaning = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("clean coordinates")) {
-			System.out.println("Please enter coordinates in the form: (a,b),(c,d)");
-			this.isCleanCoor = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("clean rectangle")) {
-			System.out.println(
-					"Please enter coordinates in the form: (upperleft x,upperleft y),(lowerright x,lowerright y)");
-			this.isCleanRect = true;
-			return Action.DO_NOTHING;
-		}
-		if (name.contains("combine plan") && this.isCombining == false) {
-			System.out.println("Combining two plans for you.");
-			this.currentcombiningP = new LinkedList<Action>();
-			extractCombine(name);
-			this.isNamingPlan = true;
-			this.isCombining = true;
-			return Action.DO_NOTHING;
-		}
-		if (this.isRecording) {
-			System.out.println("Recording path");
-			if (prevAct != null) {
-				System.out.println(this.prevAct == Action.CLEAN);
-
-//				if (this.prevAct == Action.CLEAN)
-//					this.currentP.add(Action.CLEAN);
-//				else
-				this.currentP.add(this.prevAct);
-				System.out.println(this.currentP.get(0) == Action.CLEAN);
-			}
-			if (name.contains("end record") || name.contains("finish record")) {
-				this.isRecording = false;
-				this.isNamingPlan = true;
-				this.currentP.remove(0);
-				System.out.println("Recording finished");
-				return Action.DO_NOTHING;
-			}
-
-		}
-		if (this.isNamingPlan) {
-			if (this.isCombining) {
-				Plan p = new Plan(name, currentcombiningP);
-				this.env.plans.add(p);
-				// this.recordedP.put(name, currentcombiningP);
-				System.out.println("Named the combined plan " + name);
-				this.isCombining = false;
-				this.isNamingPlan = false;
-			} else {
-				Plan p = new Plan(name, currentP);
-				this.env.plans.add(p);
-				// this.recordedP.put(name, currentP);
-				System.out.println("Named the plan " + name);
-				this.isNamingPlan = false;
-				this.env.setnonRecord();
-			}
-			return Action.DO_NOTHING;
-		}
-
-		this.checkForExecutePlan(name);
-
-		// execute paths
-		if (this.isExecuting) {
-			if (this.pathIterator.hasNext()) {
-				return this.pathIterator.next();
-			} else {
-				this.isExecuting = false;
-			}
-		}
-		if (name.contains("not") || name.contains("don't") || name.contains("no")) {
-			System.out.println(getRandom(this.reponses));
-			System.out.println("Sure, do nothing.");
-			this.prevAct = Action.DO_NOTHING;
-			return Action.DO_NOTHING;
-		}
-
-		if (sentences != null && !sentences.isEmpty()) {
-			CoreMap sentence = sentences.get(0);
-			SemanticGraph graph = sentence
-					.get(SemanticGraphCoreAnnotations.CollapsedCCProcessedDependenciesAnnotation.class);
-//			graph.prettyPrint();
-			IndexedWord root = graph.getFirstRoot();
-			List<Pair<GrammaticalRelation, IndexedWord>> pairs = graph.childPairs(root);
-			String type = root.tag();
-			String rootString = root.toString();
-			// System.out.println("Root: " + rootString);
-			// System.out.println("Pairs: " + pairs.toString());
-			switch (type) {
-			case "VB":
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "VBP":
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "JJR": // root is more, more up
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			case "NN": // root is more, more up
-				if (this.isRecording)
-					return processVB(graph, root);
-				else
-					return HandlingRandomandCollision(processVB(graph, root));
-			default:
-				if (this.isRecording)
-					return processSingleWord(name, root, graph);
-				else
-					return HandlingRandomandCollision(processSingleWord(name, root, graph));
-			}
-
-		}
-		System.out.println("Empty sentence.");
-		if (!this.isResponding) {
-			System.out.println(getRandom(this.clarifications));
-		}
-		return HandlingRandomandCollision(Action.DO_NOTHING);
-	}
+//		System.out.println(" ");
+//
+////		if (env.getTileStatus(this.posRow, this.posCol) == (TileStatus.DIRTY)) {
+////
+////			if (!env.haveWeAssignedThis(this.posRow, this.posCol)) {
+////				if (this.posRow == this.placeToClean.getRow() && this.posCol == this.placeToClean.getCol()) {
+////					recomputeValueMatrix = true;
+////				} else
+////					recomputeValueMatrix = false;
+////			}
+////			return Action.CLEAN;
+////		}
+//
+//		// only do this if we are cleaning the one we assigned to ourself
+//		if (this.getPosCol() == this.placeToClean.getCol() && this.getPosRow() == this.placeToClean.getRow()) {
+//			recomputeValueMatrix = true;
+//			return Action.CLEAN;
+//
+//		}
+//
+//		String ret = policyForSelf[this.posRow][this.posCol];
+//		Action returnMe = Action.DO_NOTHING;
+//
+//		Position goingInto = new Position(0, 0);
+//
+//		switch (ret) {
+//		case "up":
+//			returnMe = Action.MOVE_UP;
+//			goingInto = new Position(posRow - 1, posCol);
+//			break;
+//		case "down":
+//			returnMe = Action.MOVE_DOWN;
+//			goingInto = new Position(posRow + 1, posCol);
+//			break;
+//		case "right":
+//			returnMe = Action.MOVE_RIGHT;
+//			goingInto = new Position(posRow, posCol + 1);
+//			break;
+//		case "left":
+//			returnMe = Action.MOVE_LEFT;
+//			goingInto = new Position(posRow, posCol - 1);
+//			break;
+//		}
+//		Random randy = new Random();
+//		int choice = randy.nextInt(10);
+//
+//		if (choice == 0) {
+//			switch (ret) {
+//			case "up":
+//			case "down":
+//				goingInto = new Position(posRow, posCol - 1);
+//				returnMe = Action.MOVE_LEFT;
+//				break;
+//			case "left":
+//			case "right":
+//				goingInto = new Position(posRow - 1, posCol);
+//				returnMe = Action.MOVE_UP;
+//				break;
+//			}
+//		}
+//		if (choice == 1) {
+//			switch (ret) {
+//			case "up":
+//			case "down":
+//				goingInto = new Position(posRow, posCol + 1);
+//				returnMe = Action.MOVE_RIGHT;
+//				break;
+//			case "left":
+//			case "right":
+//				goingInto = new Position(posRow + 1, posCol);
+//				returnMe = Action.MOVE_DOWN;
+//				break;
+//			}
+//		}
+//
+//		for (RobotSpecial check : env.currentRobotPositions.keySet()) {
+//
+//			if (!check.equals(this)) {
+//				if (check.posRow == goingInto.getRow() && check.posCol == goingInto.getCol()) {
+//					return Action.DO_NOTHING;
+//				}
+//			}
+//		}
+//		return returnMe;
+//
+//	}
 
 	// handling the random and collision of 11 and 13 in last milestone
 	public Action HandlingRandomandCollision(Action action) {
@@ -525,11 +315,10 @@ public class Robot {
 
 		for (Robot check : env.currentRobotPositions.keySet()) {
 
-			if (!check.equals(this)) {
-				if (check.posRow == goingInto.getRow() && check.posCol == goingInto.getCol()) {
-					return Action.DO_NOTHING;
-				}
+			if (check.getPosRow() == goingInto.getRow() && check.getPosCol() == goingInto.getCol()) {
+				return Action.DO_NOTHING;
 			}
+
 		}
 		return returnMe;
 	}
@@ -706,7 +495,7 @@ public class Robot {
 	 * functions.
 	 */
 
-	public Action getAction() {
+	public Action getAction(String command) {
 		if (this.env.inRecording && this.id != this.env.recordingRobot)
 			return Action.DO_NOTHING;
 
@@ -742,10 +531,9 @@ public class Robot {
 		} else
 			n = color + " " + myname;
 		System.out.print(n + "> ");
-		sc = new Scanner(System.in);
-		String name = sc.nextLine();
-//	    System.out.println(name);
-		name = name.toLowerCase();
+//		sc = new Scanner(System.in);
+//		String name = sc.nextLine();
+		String name = command.toLowerCase();
 		annotation = new Annotation(name);
 		pipeline.annotate(annotation);
 		List<CoreMap> sentences = annotation.get(CoreAnnotations.SentencesAnnotation.class);
