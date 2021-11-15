@@ -7,4 +7,10 @@ right right clean left left down
 d
 right right clean left left down right right clean left left down 
 h
-right right clean right right clean left left down 
+right right clean right right clean left left down
+circle
+right down left clean 
+go-way-right
+left up right right 
+newplan
+right down left clean left up right right 

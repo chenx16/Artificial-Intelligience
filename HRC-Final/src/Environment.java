@@ -91,13 +91,13 @@ public class Environment {
 			while ((read = reader.readLine()) != null) {
 				if (i % 2 == 0) {
 					name = read;
-					System.out.println(name);
+//					System.out.println(name);
 					i++;
 				} else {
 					String[] splited = read.split(" ");
 					LinkedList<Action> actions = new LinkedList<Action>();
 					for (String part : splited) {
-						System.out.print(part + "");
+//						System.out.print(part + "");
 						if (part.equals("right"))
 							actions.add(Action.MOVE_RIGHT);
 						if (part.equals("left"))
@@ -109,7 +109,7 @@ public class Environment {
 						if (part.equals("clean"))
 							actions.add(Action.CLEAN);
 					}
-					System.out.println();
+//					System.out.println();
 					this.plans.add(new Plan(name, actions));
 					i++;
 				}

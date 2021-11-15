@@ -40,7 +40,7 @@ public class VisualizeSimulation extends JFrame {
 	 */
 	public VisualizeSimulation() throws IOException {
 		// TODO: change the following to run the simulation on different maps.
-		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\Map104.txt";
+		String filename = "C:\\Users\\chenx16\\Desktop\\CSSE413\\HRC-Final\\mapWeMade.txt";
 		LinkedList<String> map = new LinkedList<>();
 		try {
 			File inputFile = new File(filename);
@@ -177,7 +177,7 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 			// Gets the new state of the world after robot actions
 			public void updateEnvironment() throws IOException {
 				timesteps++;
-				if (((int) (Math.random() * 5)) == 0) {
+				if (((int) (Math.random() * 10)) == 0) {
 					int row = (int) (Math.random() * env.getRows());
 					int col = (int) (Math.random() * env.getCols());
 					if (env.validPos(row, col)) {
@@ -187,7 +187,7 @@ class EnvironmentPanel extends JPanel implements KeyListener {
 					}
 				}
 				// TODO: the following screws up the id numbers.
-				if (((int) (Math.random() * 50)) == 0) {
+				if (((int) (Math.random() * 380)) == 0) {
 					if((int) (Math.random() * robots.size())!=0) {
 						// if we are deleting a robot, then we need to put the tile they were assigned
 						// to back in the pool
